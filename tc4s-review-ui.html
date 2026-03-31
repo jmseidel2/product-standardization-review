@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#0d0f12;--bg2:#141720;--bg3:#1c2030;
@@ -27,8 +28,7 @@ header{grid-column:1/-1;background:var(--bg2);border-bottom:1px solid var(--bord
 .hst{margin-left:auto;font-size:11px;font-family:var(--mono);color:var(--muted);display:flex;align-items:center;gap:6px}
 .dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
 .dot.ok{background:var(--green)}.dot.err{background:var(--red)}.dot.ai{background:var(--purple)}
-aside{background:var(--bg2);border-right:1px solid var(--border);
-  overflow-y:auto;display:flex;flex-direction:column}
+aside{background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
 .tabs-nav{display:flex;border-bottom:1px solid var(--border)}
 .tnav{flex:1;padding:10px 0;font-size:11px;font-family:var(--mono);text-align:center;
   cursor:pointer;color:var(--muted);border:none;background:transparent;
@@ -36,8 +36,7 @@ aside{background:var(--bg2);border-right:1px solid var(--border);
 .tnav.on{color:var(--text);border-bottom-color:var(--accent)}
 .tpanel{display:none;padding:14px;flex-direction:column;gap:16px;flex:1}
 .tpanel.on{display:flex}
-.sb h4{font-size:10px;font-family:var(--mono);letter-spacing:.1em;color:var(--muted);
-  text-transform:uppercase;margin-bottom:8px}
+.sb h4{font-size:10px;font-family:var(--mono);letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
 label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;font-family:var(--mono)}
 input[type=text],input[type=password],select{width:100%;background:var(--bg3);
   border:1px solid var(--border);border-radius:6px;color:var(--text);
@@ -50,20 +49,12 @@ select option{background:var(--bg3)}
   border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .12s}
 .tog.on{background:var(--accent2);border-color:var(--accent);color:#fff}
 .rbtn{width:100%;padding:9px;background:var(--accent2);border:none;border-radius:8px;
-  color:#fff;font-family:var(--mono);font-size:12px;cursor:pointer;transition:background .15s}
-.rbtn:hover{background:var(--accent)}.rbtn.sec{background:var(--bg3);border:1px solid var(--border2);margin-bottom:5px}
-.ie{display:grid;grid-template-columns:60px 1fr 22px;gap:3px;margin-bottom:4px;align-items:center}
-.ie input,.ie select{margin-bottom:0;font-size:11px}.ie select{padding:6px 4px}
-.rmb{width:22px;height:22px;background:transparent;border:1px solid var(--border);border-radius:4px;
-  color:var(--muted);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
-.rmb:hover{border-color:var(--red);color:var(--red)}
-.addb{font-size:11px;font-family:var(--mono);background:transparent;border:1px dashed var(--border2);
-  border-radius:6px;color:var(--muted);width:100%;padding:4px;cursor:pointer;transition:all .15s}
-.addb:hover{border-color:var(--accent);color:var(--accent)}
+  color:#fff;font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .15s}
+.rbtn:hover:not(:disabled){background:var(--accent)}
+.rbtn.sec{background:var(--bg3);border:1px solid var(--border2);color:var(--text);margin-bottom:5px}
+.rbtn:disabled{opacity:.45;cursor:not-allowed}
 .th{font-size:10px;color:var(--muted);line-height:1.5;margin-top:-5px;margin-bottom:7px}
-.th.ok{color:var(--green)}.th.ai-on{color:var(--purple)}
-
-/* AI toggle row */
+.th.ok{color:var(--green)}
 .ai-row{display:flex;align-items:center;gap:8px;padding:8px 10px;
   background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:8px}
 .ai-label{font-size:11px;font-family:var(--mono);color:var(--muted);flex:1}
@@ -75,8 +66,6 @@ select option{background:var(--bg3)}
 .sw-thumb{position:absolute;top:2px;left:2px;width:12px;height:12px;background:#fff;border-radius:50%;
   transition:transform .2s;pointer-events:none}
 .sw input:checked~.sw-track .sw-thumb{transform:translateX(14px)}
-
-/* Rule editor */
 .rule-item{background:var(--bg3);border:1px solid var(--border);border-radius:7px;
   padding:8px 10px;margin-bottom:5px;display:flex;align-items:center;gap:8px}
 .ri-id{font-size:10px;font-family:var(--mono);color:var(--muted);min-width:64px}
@@ -84,9 +73,7 @@ select option{background:var(--bg3)}
 .ri-badges{display:flex;gap:4px;flex-shrink:0}
 .rbadge{font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:3px;font-weight:500}
 .rb-act{background:#0f2a1a;color:#4ade80}.rb-rec{background:#2a1e0a;color:#fbbf24}
-.rb-off{background:var(--bg);color:var(--muted)}
-.rb-ai{background:#1e1040;color:#a78bfa}
-
+.rb-off{background:var(--bg);color:var(--muted)}.rb-ai{background:#1e1040;color:#a78bfa}
 main{overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:12px}
 .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:10px;color:var(--muted);font-family:var(--mono);font-size:12px}
@@ -108,6 +95,8 @@ main{overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:12
 .gcr{background:#1f1a30;color:#c4b5fd;border:1px solid #3a2a60}
 .gpatch{background:#1a2a1a;color:#86efac;border:1px solid #2a4a2a}
 .gpr{background:#0f2a1a;color:#4ade80;border:1px solid #1a4a2a}
+.gqg1{background:#1a2540;color:#7db4f7;border:1px solid #2a3a60;font-size:11px;padding:3px 10px}
+.gqg2{background:#0f2a1a;color:#4ade80;border:1px solid #1a4a2a;font-size:11px;padding:3px 10px}
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:5px}
 .ch{padding:9px 13px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border);
   cursor:pointer;user-select:none;background:var(--bg3)}
@@ -115,7 +104,7 @@ main{overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:12
 .inum{font-family:var(--mono);font-size:11px;color:var(--accent);background:#1a2540;
   padding:2px 6px;border-radius:4px;border:1px solid #2a3a60;white-space:nowrap}
 .ititle{font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ibadges{display:flex;gap:4px;flex-shrink:0}
+.ibadges{display:flex;gap:4px;flex-shrink:0;align-items:center}
 .badge{font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:4px;font-weight:500;white-space:nowrap}
 .bgate{background:#1a2540;color:#7db4f7;border:1px solid #2a3a60}
 .btype{background:#1e2535;color:var(--muted);border:1px solid var(--border)}
@@ -141,7 +130,7 @@ table.rt th{font-size:10px;font-family:var(--mono);color:var(--muted);text-trans
 table.rt td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:top}
 table.rt tr:last-child td{border-bottom:none}
 table.rt tr:hover td{background:#151a24}
-.cid{width:72px}.crule{width:160px}.cres{width:78px}.cfind{}
+.cid{width:80px}.crule{width:155px}.cres{width:82px}.cfind{}
 .rid{font-family:var(--mono);font-size:10px;color:var(--muted)}
 .rpill{font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:7px;
   font-weight:500;white-space:nowrap;display:inline-block}
@@ -151,7 +140,6 @@ table.rt tr:hover td{background:#151a24}
 .fmp{background:#2a1e0a;color:#fbbf24}.fep{background:#0f2a1a;color:#4ade80}
 .aip{background:#1e1040;color:#c4b5fd}
 .fm{font-size:12px;color:var(--text);margin-bottom:2px;line-height:1.5}
-.rat{font-size:11px;color:#5a6a80;line-height:1.5;font-style:italic;margin-bottom:2px}
 .fsrc{font-size:10px;font-family:var(--mono);color:#4a5568;padding:1px 0}
 .floc{font-size:10px;font-family:var(--mono);color:var(--accent);background:#1a2540;
   padding:2px 5px;border-radius:3px;display:inline-block;margin-top:2px}
@@ -165,6 +153,28 @@ table.rt tr:hover td{background:#151a24}
 .expbtn{font-size:11px;font-family:var(--mono);padding:5px 11px;border-radius:6px;
   border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
 .expbtn:hover{border-color:var(--accent);color:var(--accent)}
+/* Selection panel */
+.sel-group{border-bottom:1px solid var(--border)}
+.sel-group:last-child{border-bottom:none}
+.sel-group-hdr{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.06em;padding:8px 13px;background:var(--bg);display:flex;align-items:center;gap:8px}
+.sel-item{display:flex;align-items:center;gap:7px;padding:5px 13px;transition:background .1s}
+.sel-item:hover{background:var(--bg3)}
+.sel-item input[type=checkbox]{width:13px;height:13px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.sel-item-num{font-family:var(--mono);font-size:11px;color:var(--accent);min-width:42px}
+.sel-item-title{font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+/* Suggestions */
+.sugg-box{margin-top:5px;padding:5px 9px;background:#0a1628;border-left:2px solid var(--accent);
+  border-radius:0 4px 4px 0;font-size:11px;color:#7db4f7;line-height:1.5}
+/* Export checkbox */
+.export-chk{display:flex;align-items:center;gap:3px;cursor:pointer;padding:1px 5px;
+  border-radius:3px;border:1px solid var(--border);background:var(--bg);margin-left:4px}
+.export-chk input{accent-color:var(--accent);cursor:pointer;width:11px;height:11px}
+.export-chk span{font-size:9px;font-family:var(--mono);color:var(--muted)}
+/* QG gate section headers in results */
+.gate-hdr{padding:10px 0 6px;display:flex;align-items:center;gap:8px;
+  border-bottom:2px solid var(--border2);margin-bottom:10px;margin-top:4px}
+.gate-hdr-lbl{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--text)}
 </style>
 </head>
 <body>
@@ -198,19 +208,14 @@ table.rt tr:hover td{background:#151a24}
     </div>
     <div class="sb">
       <h4>Scope</h4>
-      <label>Milestone</label>
-      <input type="text" id="ms" placeholder="e.g. 26.06 or CX-Titan">
+      <label>Milestone <span style="font-weight:300;color:var(--muted)">(optional — substring ok)</span></label>
+      <input type="text" id="ms" placeholder="e.g. 26.06 or CX-Titan" list="ms-list" autocomplete="off">
+      <datalist id="ms-list"></datalist>
       <label>Gate</label>
       <div class="tr">
         <button class="tog on" id="tqg1" onclick="tg('qg1')">QG1 Issues</button>
         <button class="tog on" id="tqg2" onclick="tg('qg2')">QG2 PRs</button>
       </div>
-    </div>
-    <div class="sb">
-      <h4>Specific items <span style="color:var(--muted);font-weight:300">(optional)</span></h4>
-      <div class="th">Leave empty → all milestone items.</div>
-      <div id="il"></div>
-      <button class="addb" onclick="addItem()">+ add item</button>
     </div>
     <div class="sb">
       <h4>Check categories</h4>
@@ -221,8 +226,9 @@ table.rt tr:hover td{background:#151a24}
         <button class="tog on" id="ccac"  onclick="tc('cac')">CAC</button>
       </div>
     </div>
-    <div style="margin-top:auto">
-      <button class="rbtn" onclick="run()">▶ Run review</button>
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px">
+      <button class="rbtn sec" onclick="fetchItems()">① Fetch items</button>
+      <button class="rbtn" id="run-btn" onclick="runOnSelected()" disabled>② Run review</button>
     </div>
   </div>
 
@@ -259,7 +265,7 @@ table.rt tr:hover td{background:#151a24}
       <button class="rbtn sec" onclick="testAI()">Test AI connection</button>
     </div>
     <div class="sb">
-      <h4>AI check toggles per category</h4>
+      <h4>AI checks per category</h4>
       <div class="ai-row" style="margin-bottom:5px">
         <span class="ai-label" id="ai-qg1-lbl">QG1 content analysis</span>
         <label class="sw"><input type="checkbox" id="ai-qg1" checked onchange="updateAILabels()"><div class="sw-track"><div class="sw-thumb"></div></div></label>
@@ -276,6 +282,10 @@ table.rt tr:hover td{background:#151a24}
         <span class="ai-label" id="ai-cac-lbl">CAC quality analysis</span>
         <label class="sw"><input type="checkbox" id="ai-cac" checked onchange="updateAILabels()"><div class="sw-track"><div class="sw-thumb"></div></div></label>
       </div>
+      <div class="ai-row" style="margin-bottom:5px">
+        <span class="ai-label" id="ai-cr-lbl">CR issue-PR coherence</span>
+        <label class="sw"><input type="checkbox" id="ai-cr" checked onchange="updateAILabels()"><div class="sw-track"><div class="sw-thumb"></div></div></label>
+      </div>
     </div>
   </div>
 
@@ -290,7 +300,7 @@ table.rt tr:hover td{background:#151a24}
       <div id="rl-qg1"></div>
     </div>
     <div class="sb">
-      <h4>QG2 + BC + CAC rules</h4>
+      <h4>QG2 + BC + CAC + CR rules</h4>
       <div id="rl-qg2"></div>
     </div>
     <div style="margin-top:auto">
@@ -300,7 +310,7 @@ table.rt tr:hover td{background:#151a24}
 </aside>
 
 <main id="mp">
-  <div class="empty"><div style="font-size:28px;opacity:.3">⬡</div><div>Configure and run a review</div></div>
+  <div class="empty"><div style="font-size:28px;opacity:.3">⬡</div><div>Click "① Fetch items" to load issues and PRs</div></div>
 </main>
 
 <script>
@@ -316,13 +326,13 @@ function getTok(){return document.getElementById('tok').value.trim()||loadTok()|
 function onTok(){const t=document.getElementById('tok').value.trim();if(t){saveTok(t);const h=Math.max(0,Math.round(((+localStorage.getItem(TE)||0)-Date.now())/36e5));document.getElementById('th-tok').textContent=`Token cached ~${h}h`;document.getElementById('th-tok').className='th ok';}}
 
 // ── AI key (sessionStorage only) ─────────────────────────────────────────────
-function saveAIKey(){const k=document.getElementById('ai-key').value.trim();const u=document.getElementById('ai-baseurl')?.value.trim()||'';if(k) sessionStorage.setItem('tc4s_aikey',k);if(u) sessionStorage.setItem('tc4s_aiurl',u);}
+function saveAIKey(){const k=document.getElementById('ai-key').value.trim();const u=document.getElementById('ai-baseurl')?.value.trim()||'';if(k)sessionStorage.setItem('tc4s_aikey',k);if(u)sessionStorage.setItem('tc4s_aiurl',u);}
 function getAIKey(){return document.getElementById('ai-key').value.trim()||sessionStorage.getItem('tc4s_aikey')||'';}
 function getAIUrl(){return document.getElementById('ai-baseurl')?.value.trim()||sessionStorage.getItem('tc4s_aiurl')||'';}
 function getAIModel(){return document.getElementById('ai-model').value.trim()||'claude-sonnet-4-20250514';}
 function getAIProvider(){return document.getElementById('ai-provider').value;}
-function aiEnabled(){return document.getElementById('ai-master').checked && !!getAIKey();}
-function aiGroupOn(g){return document.getElementById('ai-master').checked && document.getElementById('ai-'+g)?.checked;}
+function aiEnabled(){return document.getElementById('ai-master').checked&&!!getAIKey();}
+function aiGroupOn(g){return document.getElementById('ai-master').checked&&document.getElementById('ai-'+g)?.checked;}
 
 function toggleAI(){
   const on=document.getElementById('ai-master').checked;
@@ -333,9 +343,9 @@ function toggleAI(){
   document.getElementById('ai-lbl').style.color=on?'var(--purple)':'var(--muted)';
 }
 function updateAILabels(){
-  ['qg1','pr','bc','cac'].forEach(g=>{
+  ['qg1','pr','bc','cac','cr'].forEach(g=>{
     const on=document.getElementById('ai-'+g)?.checked;
-    document.getElementById('ai-'+g+'-lbl').className='ai-label'+(on?' on':'');
+    if(document.getElementById('ai-'+g+'-lbl')) document.getElementById('ai-'+g+'-lbl').className='ai-label'+(on?' on':'');
   });
 }
 function onProviderChange(){
@@ -345,12 +355,9 @@ function onProviderChange(){
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
-const S={gates:{qg1:true,qg2:true},checks:{qg1rules:true,bc:true,qg2rules:true,cac:true},items:[],rules:{qg1:[],qg2:[]}};
+const S={gates:{qg1:true,qg2:true},checks:{qg1rules:true,bc:true,qg2rules:true,cac:true},rules:{qg1:[],qg2:[]}};
 function tg(k){S.gates[k]=!S.gates[k];document.getElementById('t'+k).classList.toggle('on',S.gates[k]);}
 function tc(k){S.checks[k]=!S.checks[k];const m={qg1rules:'cqg1',bc:'cbc',qg2rules:'cqg2',cac:'ccac'};document.getElementById(m[k]).classList.toggle('on',S.checks[k]);}
-function addItem(n='',t='issue'){S.items.push({num:n,type:t});renderItems();}
-function rmItem(i){S.items.splice(i,1);renderItems();}
-function renderItems(){document.getElementById('il').innerHTML=S.items.map((it,i)=>`<div class="ie"><input type="text" value="${it.num}" placeholder="#NNN" onchange="S.items[${i}].num=this.value.replace('#','')" style="font-size:11px"><select onchange="S.items[${i}].type=this.value"><option value="issue" ${it.type==='issue'?'selected':''}>Issue</option><option value="pr" ${it.type==='pr'?'selected':''}>PR</option></select><button class="rmb" onclick="rmItem(${i})">×</button></div>`).join('');}
 
 function sideTab(t){
   ['review','ai','rules'].forEach(x=>{
@@ -362,31 +369,19 @@ function sideTab(t){
 
 // ── Load YAML rules ───────────────────────────────────────────────────────────
 async function loadRules(){
-  const base=RULES_BASE;
   try{
     const [r1,r2]=await Promise.all([
-      fetch(base+'qg1-rules.yaml').then(r=>r.text()),
-      fetch(base+'qg2-rules.yaml').then(r=>r.text()),
+      fetch(RULES_BASE+'qg1-rules.yaml').then(r=>r.text()),
+      fetch(RULES_BASE+'qg2-rules.yaml').then(r=>r.text()),
     ]);
-    const q1=jsyaml.load(r1), q2=jsyaml.load(r2);
+    const q1=jsyaml.load(r1),q2=jsyaml.load(r2);
     S.rules.qg1=q1.rules||[];
-    S.rules.qg2=[
-      ...(q2.pr_body_rules||[]),
-      ...(q2.artifact_rules||[]),
-      ...(q2.bc_diff_rules||[]),
-      ...(q2.cac_quality_rules||[]),
-      ...(q2.data_model_rules||[]),
-    ];
+    S.rules.qg2=[...(q2.pr_body_rules||[]),...(q2.artifact_rules||[]),...(q2.bc_diff_rules||[]),...(q2.cac_quality_rules||[]),...(q2.data_model_rules||[])];
     document.getElementById('rules-status').textContent=`${S.rules.qg1.length} QG1 + ${S.rules.qg2.length} QG2/BC/CAC rules loaded.`;
     document.getElementById('rules-status').className='th ok';
-    log(`Rules loaded: ${S.rules.qg1.length} QG1, ${S.rules.qg2.length} QG2/BC/CAC`,'lok');
-  } catch(e){
-    // Fallback to embedded rules if YAML fetch fails (e.g. running locally)
-    S.rules.qg1=FALLBACK_QG1;
-    S.rules.qg2=FALLBACK_QG2;
+  }catch(e){
+    S.rules.qg1=FALLBACK_QG1;S.rules.qg2=FALLBACK_QG2;
     document.getElementById('rules-status').textContent=`Using embedded rules (YAML fetch failed: ${e.message.slice(0,60)})`;
-    document.getElementById('rules-status').className='th';
-    log(`YAML fetch failed — using embedded fallback rules`,'linf');
   }
 }
 async function reloadRules(){document.getElementById('rules-status').textContent='Reloading…';await loadRules();renderRulesTab();}
@@ -407,7 +402,7 @@ function renderRulesTab(){
 
 // ── GitHub API ────────────────────────────────────────────────────────────────
 async function gh(path){
-  const tok=getTok();if(!tok) throw new Error('No token.');
+  const tok=getTok();if(!tok) throw new Error('No GitHub token provided.');
   const r=await fetch(`https://api.github.com${path}`,{headers:{'Authorization':`Bearer ${tok}`,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}});
   if(r.status===401) throw new Error('Token invalid or expired.');
   if(!r.ok) throw new Error(`GitHub API ${r.status}: ${path}`);
@@ -417,32 +412,29 @@ async function ghAll(path){const out=[];let p=1;while(true){const sep=path.inclu
 async function testConn(){const dot=document.getElementById('conn-dot'),lbl=document.getElementById('conn-lbl');dot.className='dot';lbl.textContent='checking…';try{const r=await gh(`/repos/${OW}/${RE}`);dot.className='dot ok';lbl.textContent=`connected · ${r.open_issues_count} open`;if(document.getElementById('tok').value.trim())saveTok(document.getElementById('tok').value.trim());}catch(e){dot.className='dot err';lbl.textContent=e.message;}}
 
 // ── AI API ────────────────────────────────────────────────────────────────────
-async function callAI(prompt, context){
-  const key=getAIKey(), provider=getAIProvider(), model=getAIModel();
+async function callAI(prompt,context){
+  const key=getAIKey(),provider=getAIProvider(),model=getAIModel();
   if(!key) return null;
   const messages=[{role:'user',content:`${prompt}\n\nContent to analyse:\n\`\`\`\n${context.slice(0,3000)}\n\`\`\``}];
   const systemPrompt='You are a TC4S (Technical Committee for Standardisation) reviewer for Catena-X standards. Be precise, objective, and concise. Always respond with valid JSON in the exact format requested. Do not add explanations outside the JSON structure.';
-
-  let url, headers, body;
+  let url,headers,body;
   if(provider==='claude'){
     url='https://api.anthropic.com/v1/messages';
     headers={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
     body=JSON.stringify({model,max_tokens:400,system:systemPrompt,messages});
-  } else {
+  }else{
     url=(provider==='custom'?getAIUrl():'https://api.openai.com/v1')+'/chat/completions';
     headers={'Content-Type':'application/json','Authorization':`Bearer ${key}`};
     body=JSON.stringify({model,max_tokens:400,temperature:0.1,messages:[{role:'system',content:systemPrompt},...messages]});
   }
-
   try{
     const r=await fetch(url,{method:'POST',headers,body});
     if(!r.ok) return null;
     const d=await r.json();
     const text=provider==='claude'?d.content?.[0]?.text:d.choices?.[0]?.message?.content;
     if(!text) return null;
-    const clean=text.replace(/```json|```/g,'').trim();
-    return JSON.parse(clean);
-  } catch{return null;}
+    return JSON.parse(text.replace(/```json|```/g,'').trim());
+  }catch{return null;}
 }
 
 async function testAI(){
@@ -461,7 +453,51 @@ const wc=t=>(t||'').split(/\s+/).filter(Boolean).length;
 function sec(b,h){const m=(b||'').match(new RegExp(`#+\\s*${h}[^\\n]*\\n([\\s\\S]*?)(?=\\n#+|$)`,'i'));return m?m[1].trim():null;}
 function cxIds(t){return[...new Set((t.match(/CX-0\d{3}/gi)||[]))];}
 function semP(s){const m=s.match(/(\d+)\.(\d+)\.(\d+)\s*(?:→|->|to)\s*(\d+)\.(\d+)\.(\d+)/i);if(!m)return null;const[,ma,mi,pa,mb,mib,pb]=m.map(Number);return mb>ma?'major':mib>mi?'minor':pb>pa?'patch':null;}
-function classify(issue){const t=`${issue.title} ${issue.body||''}`.toLowerCase();const lb=(issue.labels||[]).map(l=>l.name.toLowerCase());if(lb.some(l=>l.includes('sr')||l.includes('standard-request')))return 'SR';if(has(t,'standard request','[sr]','new standard'))return 'SR';const vm=t.match(/(\d+)\.(\d+)\.(\d+)\s*(?:→|->|to)\s*(\d+)\.(\d+)\.(\d+)/);if(vm&&semP(vm[0])==='patch')return 'Patch';return 'CR';}
+function classify(issue){
+  const t=`${issue.title} ${issue.body||''}`.toLowerCase();
+  const lb=(issue.labels||[]).map(l=>l.name.toLowerCase());
+  if(lb.some(l=>l.includes('sr')||l.includes('standard-request')))return 'SR';
+  if(has(t,'standard request','[sr]','new standard'))return 'SR';
+  const vm=t.match(/(\d+)\.(\d+)\.(\d+)\s*(?:→|->|to)\s*(\d+)\.(\d+)\.(\d+)/);
+  if(vm&&semP(vm[0])==='patch')return 'Patch';
+  return 'CR';
+}
+function log(msg,cls=''){const lb=document.getElementById('lb');if(!lb)return;const d=document.createElement('div');if(cls)d.className=cls;d.textContent=msg;lb.appendChild(d);lb.scrollTop=lb.scrollHeight;}
+
+// ── Suggestions ───────────────────────────────────────────────────────────────
+const SUGGESTIONS={
+  'QG1-01':'Add a "## Management Summary" section with ≥30 substantive words explaining why this change is needed and what coordination problem it solves between independent parties.',
+  'QG1-02':'Set the `domain-manager-approved` label and list ≥3 distinct Catena-X member companies supporting this request as bullet points in the issue body.',
+  'QG1-03':'Add a reference to the SAM/SLDT aspect model (link to eclipse-tractusx/sldt-semantic-models) and to the CHANGELOG.md file.',
+  'QG1-04':'Add a scope section (≥200 words) with clear objectives, in-scope/out-of-scope boundaries, and goals for this Standard Request.',
+  'QG1-05':'Document an overlap check: list any existing CX standard IDs with similar scope and explain how this standard is differentiated.',
+  'QG1-06':'Clarify the cross-company interoperability need: name at least two independent parties that must coordinate using this standard.',
+  'QG1-07':'For each standard being replaced or consolidated, open a Deprecation Request Issue and link it with `#NNN`.',
+  'QG1-08':'State the version change type (Major/Minor/Patch) with explicit rationale, e.g. "Minor — new optional field added, no existing MUST statements changed."',
+  'QG1-09':'Add a "## Dependencies" section listing all affected CX standard IDs with a brief impact assessment for each dependency.',
+  'QG2-01':'Complete all PR checklist checkboxes — change `- [ ]` to `- [x]` for each completed item.',
+  'QG2-02':'Add all Management Summary sub-sections: 1.1 Standard ID/version, 1.2 Rationale (why), 1.3 Changes (what), 1.4 Consequences, 1.5 Backward Compatibility statement.',
+  'QG2-03':'Update CHANGELOG.md with a new versioned entry following the Keep a Changelog format (e.g. `## [1.1.0] - 2026-03-31`).',
+  'QG2-04':'Add a version pattern to the PR body, e.g. `1.0.0 → 1.1.0`, and classify the bump as Major/Minor/Patch with rationale.',
+  'QG2-05':'Add a link to the released aspect model version in eclipse-tractusx/sldt-semantic-models.',
+  'QG2-12':'Add `Closes #NNN` or `Fixes #NNN` in the PR body to link the planning/change-request issue.',
+  'QG2-13':'Set a milestone on this PR to link it to the target release cycle.',
+  'QG2-19':'Move image files into the `./assets/` folder relative to the standard document.',
+  'QG2-22':'Rename asset files to kebab-case: all lowercase, hyphens instead of spaces or underscores, no special characters.',
+  'BC-PR-01':'Review MUST/SHALL statement changes. If the normative meaning changed, this is a breaking change — bump the major version and document in section 1.5.',
+  'BC-PR-02':'Removed data model fields are breaking changes. Either bump the major version or restore the field marked as `deprecated`.',
+  'BC-PR-03':'Changed API endpoints/paths are breaking changes. Bump the major version and update the BC statement in section 1.5.',
+  'BC-PR-04':'Changed field cardinality (required/optional, minCount/maxCount) may be a breaking change. Verify and update section 1.5 accordingly.',
+  'BC-PR-05':'Breaking changes detected but version type is not MAJOR. Update the version to a major bump (e.g. 1.x.x → 2.0.0) and state this in section 1.5.',
+  'CAC-01':'Add a "## Conformity Assessment Criteria" section to the standard document with testable conformance criteria.',
+  'CAC-02':'Categorise CAC criteria by type: API conformance, semantic model conformance, protocol conformance, or logic/business rule conformance.',
+  'CAC-03':'Replace vague language ("should", "where necessary", "as appropriate") with precise MUST/SHALL/MUST NOT statements.',
+  'CAC-04':'Back each CAC criterion with at least one MUST or SHALL statement that is testable and unambiguous.',
+  'CR-CHANGELOG-01':'Add a versioned changelog entry to CHANGELOG.md matching the version stated in the PR body (e.g. `## [x.y.z] - YYYY-MM-DD` with a summary of changes).',
+  'CR-STDVER-01':'Update the version field in the standard document header/metadata to match the new version stated in the PR body.',
+  'CR-SEMVER-01':'The version bump type does not match the scope of changes. Rules: MUST/normative changes without removal → Minor at least; field/endpoint removal or normative weakening → Major; fixes only → Patch.',
+  'CR-LINK-01':'This PR appears to implement a Change Request — the AI detected a mismatch between the planned changes in the linked Issue and the actual PR scope. Review and align.',
+};
 
 // ── Rule-based checks ─────────────────────────────────────────────────────────
 const P=(id,title,note,rat,src,loc)=>({id,title,result:'PASS',note:note||'',rationale:rat||'',source:src||'',loc:loc||'',blocking:false,aiResult:null});
@@ -475,7 +511,7 @@ function runQG1Checks(issue){
   const enabled=r=>S.rules.qg1.find(x=>x.id===r)?.enabled!==false;
 
   if(enabled('QG1-01')){const ms=sec(B,'Management Summary');
-    if(!ms)R.push(F('QG1-01','Management Summary present and filled','No "Management Summary" heading found.','Key basis for TC4S assessment.','CW37-2025 · Active','Issue body → Management Summary'));
+    if(!ms)R.push(F('QG1-01','Management Summary present and filled','No "Management Summary" heading found.','','CW37-2025 · Active','Issue body → Management Summary'));
     else if(wc(ms)<30)R.push(F('QG1-01','Management Summary present and filled',`Only ${wc(ms)} words — too short.`,'','CW37-2025','Issue body → Management Summary'));
     else if(has(ms,'tbd','todo','placeholder'))R.push(F('QG1-01','Management Summary present and filled','Contains placeholder text.','','CW37-2025','Issue body → Management Summary'));
     else R.push(P('QG1-01','Management Summary present and filled',`Present (${wc(ms)} words).`,'','CW37-2025','Issue body'));}
@@ -590,8 +626,8 @@ function runQG2Checks(pr,files,diffs){
   if(cc.length>0){anyHigh=true;R.push(F('BC-PR-04','Field cardinality changed',`In: ${cc.map(f=>f.filename.split('/').pop()).join(', ')}.`,'','BC-PR-04 · HIGH','',false));}
   else R.push(P('BC-PR-04','Field cardinality changed','No cardinality changes.'));
   const vp=vm?semP(vm[0]):null;
-  if(anyHigh&&vp&&vp!=='major')R.push(F('BC-PR-05','Breaking change in MAJOR release',`${vp.toUpperCase()} detected — hard blocker.`,'','BC-PR-05 · CRITICAL','',true));
-  else R.push(P('BC-PR-05','Breaking change in MAJOR release',anyHigh?'MAJOR confirmed.':'No HIGH BC changes.'));
+  if(anyHigh&&vp&&vp!=='major')R.push(F('BC-PR-05','Breaking change needs MAJOR version',`${vp.toUpperCase()} stated — must be MAJOR.`,'','BC-PR-05 · CRITICAL','',true));
+  else R.push(P('BC-PR-05','Breaking change needs MAJOR version',anyHigh?'MAJOR confirmed.':'No HIGH BC changes.'));
 
   // CAC
   const patch=diffs.filter(f=>f.filename.endsWith('.md')).map(f=>f.patch).join('\n');
@@ -606,7 +642,36 @@ function runQG2Checks(pr,files,diffs){
   const mustCnt=(patch.match(/\bMUST\b|\bSHALL\b/g)||[]).length;
   R.push(mustCnt>0?P('CAC-04','CAC backed by MUST statements',`${mustCnt} MUST(s) found.`):W('CAC-04','CAC backed by MUST statements','No MUST statements found.'));
 
-  // Data model placeholder
+  // ── CR coherence: ChangeLog version + SemVer coherence ───────────────────
+  if(vm){
+    const newVer=vm[2];
+    const clDiff=diffs.find(f=>/changelog\.md$/i.test(f.filename));
+    if(clDiff){
+      R.push(clDiff.patch.includes(newVer)
+        ?P('CR-CHANGELOG-01','ChangeLog entry for new version',`v${newVer} entry found in CHANGELOG.md diff.`,'','CR · SemVer','CHANGELOG.md diff')
+        :F('CR-CHANGELOG-01','ChangeLog entry for new version',`CHANGELOG.md changed but v${newVer} not found in diff.`,'Add versioned entry matching PR version.','CR · SemVer','CHANGELOG.md diff',false));
+    }else{
+      R.push(F('CR-CHANGELOG-01','ChangeLog entry for new version',`v${newVer} stated but no CHANGELOG.md in PR files.`,'Update CHANGELOG.md with new version entry.','CR · SemVer','Changed files',false));
+    }
+    const stdDiff=diffs.find(f=>/\.md$/i.test(f.filename)&&!/changelog/i.test(f.filename));
+    if(stdDiff){
+      R.push(stdDiff.patch.includes(newVer)
+        ?P('CR-STDVER-01','Standard doc version updated',`v${newVer} found in ${stdDiff.filename.split('/').pop()} diff.`,'','CR · SemVer',stdDiff.filename)
+        :W('CR-STDVER-01','Standard doc version updated',`${stdDiff.filename.split('/').pop()} changed but v${newVer} not visible in diff.`,'Update version field in standard document header.','CR · SemVer',stdDiff.filename));
+    }else{
+      R.push(W('CR-STDVER-01','Standard doc version updated','No standard .md file changed — cannot verify version update.','','CR · SemVer','Changed files'));
+    }
+    const statedBump=semP(vm[0]);
+    if(statedBump==='patch'&&(mc.length>0||mr.length>0)){
+      R.push(F('CR-SEMVER-01','SemVer coherence',`Patch bump but MUST/field changes detected — needs at least Minor.`,'Normative changes require Minor bump at minimum; field removals require Major.','CR · SemVer','PR body + diff',true));
+    }else if(statedBump==='minor'&&(mr.length>0||ac.length>0||cc.length>0)){
+      R.push(F('CR-SEMVER-01','SemVer coherence',`Minor bump but breaking changes (field removal / API / cardinality) — must be Major.`,'Upgrade version bump to Major.','CR · SemVer','PR body + diff',true));
+    }else{
+      R.push(P('CR-SEMVER-01','SemVer coherence',`${(statedBump||'?').toUpperCase()} bump appears consistent with diff scope.`,'','CR · SemVer','PR body + diff'));
+    }
+  }
+
+  // Data model placeholders
   R.push(SK('DM-01','[PLACEHOLDER] Aspect model structural diff','Requires access to eclipse-tractusx/sldt-semantic-models.'));
   R.push(SK('DM-02','[PLACEHOLDER] Aspect model RELEASED state','Requires API access to SLDT repository.'));
 
@@ -614,20 +679,19 @@ function runQG2Checks(pr,files,diffs){
 }
 
 // ── AI enhancement ────────────────────────────────────────────────────────────
-async function enhanceWithAI(results, context, gate){
+async function enhanceWithAI(results,context,gate){
   if(!aiEnabled()) return results;
   const allRules=[...S.rules.qg1,...S.rules.qg2];
   for(const r of results){
     const ruleDef=allRules.find(x=>x.id===r.id);
     if(!ruleDef?.ai_check||!ruleDef?.ai_prompt) continue;
-    const groupMap={'QG1-':'qg1','QG2-':'pr','BC-':'bc','CAC-':'cac'};
+    const groupMap={'QG1-':'qg1','QG2-':'pr','BC-':'bc','CAC-':'cac','CR-':'cr'};
     const group=Object.entries(groupMap).find(([k])=>r.id.startsWith(k))?.[1]||'qg1';
     if(!aiGroupOn(group)) continue;
     log(`AI analysing ${r.id}…`,'lai');
-    const aiRes=await callAI(ruleDef.ai_prompt, context);
+    const aiRes=await callAI(ruleDef.ai_prompt,context);
     if(aiRes){
       r.aiResult=aiRes;
-      // If AI is more critical than rule-based, escalate
       if(aiRes.result==='fail'&&r.result==='PASS') r.result='AI-ADVISORY';
       if(aiRes.result==='fail'&&r.result==='ADVISORY') r.result='AI-FAIL';
     }
@@ -635,83 +699,251 @@ async function enhanceWithAI(results, context, gate){
   return results;
 }
 
-// ── Milestone lookup ──────────────────────────────────────────────────────────
-async function findMS(input){
-  if(!input) return null;
-  const list=await ghAll(`/repos/${OW}/${RE}/milestones?state=all`);
-  const m=list.find(x=>x.title===input)||list.find(x=>x.title.toLowerCase().includes(input.toLowerCase()));
-  if(!m) throw new Error(`Milestone "${input}" not found.\n\nAvailable:\n${list.map(x=>`  • ${x.title}`).join('\n')}`);
-  return m;
-}
-
-// ── Run ───────────────────────────────────────────────────────────────────────
-function log(msg,cls=''){const lb=document.getElementById('lb');if(!lb)return;const d=document.createElement('div');if(cls)d.className=cls;d.textContent=msg;lb.appendChild(d);lb.scrollTop=lb.scrollHeight;}
-
-async function run(){
+// ── Fetch items (Step 1) ──────────────────────────────────────────────────────
+async function fetchItems(){
   if(!getTok()){alert('Please enter your GitHub token first.');return;}
   const mp=document.getElementById('mp');
   mp.innerHTML=`<div class="logbox" id="lb"></div><div class="empty"><div class="spin"></div><div style="font-family:var(--mono);font-size:11px">Fetching…</div></div>`;
+  document.getElementById('run-btn').disabled=true;
+  try{
+    log('Loading milestones…','linf');
+    const allMilestones=await ghAll(`/repos/${OW}/${RE}/milestones?state=all`);
+    // Populate datalist for autocomplete
+    const dl=document.getElementById('ms-list');
+    dl.innerHTML=allMilestones.map(m=>`<option value="${m.title}">`).join('');
+
+    const msInput=document.getElementById('ms').value.trim();
+    let ms=null,msLabel='all open';
+    if(msInput){
+      ms=allMilestones.find(x=>x.title===msInput)||allMilestones.find(x=>x.title.toLowerCase().includes(msInput.toLowerCase()));
+      if(!ms){
+        const avail=allMilestones.map(x=>`  • ${x.title}`).join('\n')||'  (none found)';
+        throw new Error(`Milestone "${msInput}" not found.\n\nAvailable milestones:\n${avail}`);
+      }
+      msLabel=ms.title;
+      log(`Milestone: ${ms.title}`,'lok');
+    }
+
+    const msQ=ms?`&milestone=${ms.number}`:'';
+    let msIssues=[],msPRs=[],otherIssues=[],otherPRs=[];
+
+    if(S.gates.qg1){
+      log('Fetching issues…','linf');
+      const raw=await ghAll(`/repos/${OW}/${RE}/issues?state=open${msQ}`);
+      msIssues=raw.filter(i=>!i.pull_request);
+      log(`${msIssues.length} issue(s)${ms?' with milestone':''}.`,'lok');
+      if(ms){
+        log('Fetching issues without milestone…','linf');
+        const rawNone=await ghAll(`/repos/${OW}/${RE}/issues?state=open&milestone=none`);
+        otherIssues=rawNone.filter(i=>!i.pull_request);
+        log(`${otherIssues.length} issue(s) without milestone.`,'linf');
+      }
+    }
+    if(S.gates.qg2){
+      log('Fetching PRs…','linf');
+      msPRs=await ghAll(`/repos/${OW}/${RE}/pulls?state=open${msQ}`);
+      log(`${msPRs.length} PR(s)${ms?' with milestone':''}.`,'lok');
+      if(ms){
+        const allPRs=await ghAll(`/repos/${OW}/${RE}/pulls?state=open`);
+        otherPRs=allPRs.filter(p=>!p.milestone||(ms&&p.milestone.number!==ms.number));
+        log(`${otherPRs.length} PR(s) without/other milestone.`,'linf');
+      }
+    }
+
+    window._FETCH={msIssues,msPRs,otherIssues,otherPRs};
+    renderSelectionPanel(msIssues,msPRs,otherIssues,otherPRs,msLabel);
+    document.getElementById('run-btn').disabled=false;
+    document.getElementById('run-btn').style.opacity='1';
+  }catch(e){
+    mp.innerHTML=`<div class="empty" style="color:var(--red)"><div style="font-size:20px">✕</div><div style="max-width:420px;text-align:center;white-space:pre-wrap;font-family:var(--mono);font-size:11px">${e.message}</div></div>`;
+  }
+}
+
+function renderSelectionPanel(msIssues,msPRs,otherIssues,otherPRs,msLabel){
+  const lb=document.getElementById('lb');
+  const logHtml=lb?lb.outerHTML:'';
+
+  function row(item,type,checked=true){
+    const kind=type==='pr'?'PR':classify(item);
+    const cls=kind==='SR'?'gsr':kind==='CR'?'gcr':kind==='Patch'?'gpatch':'gpr';
+    const msBadge=item.milestone?`<span class="badge btype" style="font-size:9px">${item.milestone.title}</span>`:'';
+    return `<div class="sel-item">
+      <input type="checkbox" name="sel-item" value="${item.number}" data-type="${type}" ${checked?'checked':''}>
+      <span class="sel-item-num">#${item.number}</span>
+      <span class="sel-item-title" title="${item.title.replace(/"/g,'&quot;')}">${item.title}</span>
+      <span class="gpill ${cls}" style="font-size:9px;padding:1px 5px">${kind}</span>
+      ${msBadge}
+    </div>`;
+  }
+
+  const allMs=[...msIssues.map(i=>({item:i,type:'issue'})),...msPRs.map(p=>({item:p,type:'pr'}))];
+  const allOther=[...otherIssues.map(i=>({item:i,type:'issue'})),...otherPRs.map(p=>({item:p,type:'pr'}))];
+
+  const msSection=allMs.length?`<div class="sel-group">
+    <div class="sel-group-hdr">
+      <span style="color:var(--text)">Milestone: ${msLabel}</span>
+      <span style="margin-left:4px">${allMs.length} item(s)</span>
+      <div style="margin-left:auto;display:flex;gap:4px">
+        <button class="expbtn" style="padding:2px 7px;font-size:10px" onclick="selAll('ms',true)">All</button>
+        <button class="expbtn" style="padding:2px 7px;font-size:10px" onclick="selAll('ms',false)">None</button>
+      </div>
+    </div>
+    <div id="sel-ms-items">${allMs.map(({item,type})=>row(item,type,true)).join('')}</div>
+  </div>`:'';
+
+  const otherSection=allOther.length?`<div class="sel-group">
+    <div class="sel-group-hdr" id="sel-other-hdr" onclick="toggleOtherSection()" style="cursor:pointer">
+      <span style="color:var(--yellow)">⚠ No / other milestone</span>
+      <span style="margin-left:4px">${allOther.length} item(s)</span>
+      <span style="margin-left:auto;font-size:10px">▸ expand to include</span>
+    </div>
+    <div id="sel-other-items" style="display:none">
+      ${allOther.map(({item,type})=>row(item,type,false)).join('')}
+      <div style="display:flex;gap:4px;padding:6px 13px">
+        <button class="expbtn" style="padding:2px 7px;font-size:10px" onclick="selAll('other',true)">Select all</button>
+        <button class="expbtn" style="padding:2px 7px;font-size:10px" onclick="selAll('other',false)">Deselect all</button>
+      </div>
+    </div>
+  </div>`:'';
+
+  const noItems=!msSection&&!otherSection?`<div class="empty" style="padding:32px"><div>No open items found.</div></div>`:'';
+
+  document.getElementById('mp').innerHTML=`
+    ${logHtml}
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="font-size:12px;font-family:var(--mono);color:var(--text)">Select items to review</div>
+      <div style="font-size:11px;color:var(--muted)">${allMs.length+allOther.length} total found</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      ${msSection}${otherSection}${noItems}
+    </div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">Check items to include, then click "② Run review" in the sidebar.</div>`;
+}
+
+function toggleOtherSection(){
+  const el=document.getElementById('sel-other-items');
+  const hdr=document.getElementById('sel-other-hdr');
+  if(!el) return;
+  const open=el.style.display==='none';
+  el.style.display=open?'block':'none';
+  if(hdr) hdr.querySelector('span:last-child').textContent=open?'▾ collapse':'▸ expand to include';
+}
+
+function selAll(group,val){
+  const container=document.getElementById(`sel-${group}-items`);
+  if(!container) return;
+  container.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=val);
+}
+
+function getSelected(){
+  const f=window._FETCH;
+  if(!f) return{issues:[],prs:[]};
+  const selIssues=new Set(),selPRs=new Set();
+  document.querySelectorAll('input[name="sel-item"]:checked').forEach(cb=>{
+    if(cb.dataset.type==='issue') selIssues.add(parseInt(cb.value));
+    else selPRs.add(parseInt(cb.value));
+  });
+  const allIssues=[...f.msIssues,...f.otherIssues];
+  const allPRs=[...f.msPRs,...f.otherPRs];
+  return{
+    issues:allIssues.filter(i=>selIssues.has(i.number)),
+    prs:allPRs.filter(p=>selPRs.has(p.number)),
+  };
+}
+
+// ── Run review (Step 2) ───────────────────────────────────────────────────────
+async function runOnSelected(){
+  const sel=getSelected();
+  if(!sel.issues.length&&!sel.prs.length){alert('No items selected. Fetch items first and check at least one.');return;}
+  const mp=document.getElementById('mp');
+  mp.innerHTML=`<div class="logbox" id="lb"></div><div class="empty"><div class="spin"></div><div style="font-family:var(--mono);font-size:11px">Analysing…</div></div>`;
   const aI=[],aP=[];
   try{
     if(aiEnabled()) log('AI semantic analysis: enabled','lai');
-    const msInput=document.getElementById('ms').value.trim();
-    let ms=null,msLabel='all open';
-    if(msInput){log(`Looking up "${msInput}"…`,'linf');ms=await findMS(msInput);msLabel=ms.title;log(`Found: ${ms.title}`,'lok');}
-    const msQ=ms?`&milestone=${ms.number}`:'';
-    const sI=S.items.filter(i=>i.type==='issue'&&i.num).map(i=>parseInt(i.num));
-    const sP=S.items.filter(i=>i.type==='pr'&&i.num).map(i=>parseInt(i.num));
-    let issues=[],prs=[];
-    if(sI.length>0){log(`Fetching ${sI.length} specific issue(s)…`,'linf');for(const n of sI)issues.push(await gh(`/repos/${OW}/${RE}/issues/${n}`));}
-    else if(S.gates.qg1){log('Fetching open issues…','linf');const raw=await ghAll(`/repos/${OW}/${RE}/issues?state=open${msQ}`);issues=raw.filter(i=>!i.pull_request);log(`${issues.length} issue(s).`,'lok');}
-    if(sP.length>0){log(`Fetching ${sP.length} specific PR(s)…`,'linf');for(const n of sP)prs.push(await gh(`/repos/${OW}/${RE}/pulls/${n}`));}
-    else if(S.gates.qg2){log('Fetching open PRs…','linf');prs=await ghAll(`/repos/${OW}/${RE}/pulls?state=open${msQ}`);log(`${prs.length} PR(s).`,'lok');}
-
-    for(const issue of issues){
+    for(const issue of sel.issues){
       log(`Checking Issue #${issue.number}…`);
       const q=S.checks.qg1rules?runQG1Checks(issue):{type:classify(issue),results:[]};
       if(aiEnabled()&&aiGroupOn('qg1'))
         q.results=await enhanceWithAI(q.results,`${issue.title}\n\n${issue.body||''}`,'QG1');
       aI.push({item:issue,type:q.type,qg1:q.results});
     }
-    for(const pr of prs){
+    for(const pr of sel.prs){
       log(`Checking PR #${pr.number}…`);
       const raw=await ghAll(`/repos/${OW}/${RE}/pulls/${pr.number}/files`);
       const files=raw.map(f=>f.filename),diffs=raw.map(f=>({filename:f.filename,patch:f.patch||'',status:f.status}));
       let qg2=runQG2Checks(pr,files,diffs);
-      if(aiEnabled()){
-        const prContext=`Title: ${pr.title}\n\n${pr.body||''}\n\nChanged files: ${files.join(', ')}`;
-        qg2=await enhanceWithAI(qg2,prContext,'QG2');
+      // CR coherence: AI check against linked planning issue
+      if(aiEnabled()&&aiGroupOn('cr')){
+        const lm=(pr.body||'').match(/(?:closes?|fixes?|resolves?|refs?)\s+#(\d+)/i);
+        if(lm){
+          try{
+            log(`AI: CR coherence check vs Issue #${lm[1]}…`,'lai');
+            const linkedIssue=await gh(`/repos/${OW}/${RE}/issues/${lm[1]}`);
+            const crPrompt=`You are a TC4S reviewer. Check whether this Pull Request's scope and described changes align with the planning described in the linked Issue.
+
+Issue #${linkedIssue.number}: ${linkedIssue.title}
+Issue body (first 1800 chars):
+${(linkedIssue.body||'').slice(0,1800)}
+
+PR #${pr.number}: ${pr.title}
+PR body (first 1800 chars):
+${(pr.body||'').slice(0,1800)}
+
+Assess: (1) Do the PR changes match what was planned in the Issue? (2) Are planned changes missing from the PR? (3) Does the PR introduce scope not described in the Issue?
+Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}`;
+            const cr=await callAI(crPrompt,'cr-coherence');
+            if(cr){
+              const crR=cr.result==='pass'
+                ?P('CR-LINK-01',`Issue #${lm[1]} plan vs PR coherence`,`Issue-PR alignment: ${cr.finding||'OK.'}`,'','CR · AI','PR body vs Issue')
+                :cr.result==='fail'
+                ?F('CR-LINK-01',`Issue #${lm[1]} plan vs PR coherence`,cr.finding||'Mismatch detected.','','CR · AI','PR body vs Issue',false)
+                :W('CR-LINK-01',`Issue #${lm[1]} plan vs PR coherence`,cr.finding||'Advisory.','','CR · AI','PR body vs Issue');
+              crR.aiResult=cr;
+              qg2.push(crR);
+            }
+          }catch(e){/* issue not accessible */}
+        }
       }
+      const prContext=`Title: ${pr.title}\n\n${pr.body||''}\n\nChanged files: ${files.join(', ')}`;
+      if(aiEnabled()) qg2=await enhanceWithAI(qg2,prContext,'QG2');
       aP.push({item:pr,qg2,files});
     }
+    const msLabel=document.getElementById('ms').value.trim()||'selected items';
     renderResults(aI,aP,msLabel);
-  }catch(e){mp.innerHTML=`<div class="empty" style="color:var(--red)"><div style="font-size:20px">✕</div><div style="max-width:400px;text-align:center;white-space:pre-wrap;font-family:var(--mono);font-size:11px">${e.message}</div></div>`;}
+  }catch(e){
+    mp.innerHTML=`<div class="empty" style="color:var(--red)"><div style="font-size:20px">✕</div><div style="max-width:420px;text-align:center;white-space:pre-wrap;font-family:var(--mono);font-size:11px">${e.message}</div></div>`;
+  }
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function rpill(r){
-  if(r.result==='PASS')    return '<span class="rpill pp">pass</span>';
-  if(r.result==='FAIL')    return r.blocking?'<span class="rpill bp">blocking</span>':'<span class="rpill fp">fail</span>';
-  if(r.result==='ADVISORY')return '<span class="rpill wp">advisory</span>';
-  if(r.result==='SKIP')    return '<span class="rpill sp">n/a</span>';
-  if(r.result==='AI-ADVISORY')return '<span class="rpill aip">AI advisory</span>';
-  if(r.result==='AI-FAIL') return '<span class="rpill fhp">AI fail</span>';
-  if(r.result==='FLAG')    return r.risk==='HIGH'?'<span class="rpill fhp">🔴 HIGH</span>':r.risk==='MEDIUM'?'<span class="rpill fmp">🟡 MED</span>':'<span class="rpill fep">🟢 exc.</span>';
+  if(r.result==='PASS')     return '<span class="rpill pp">pass</span>';
+  if(r.result==='FAIL')     return r.blocking?'<span class="rpill bp">blocking</span>':'<span class="rpill fp">fail</span>';
+  if(r.result==='ADVISORY') return '<span class="rpill wp">advisory</span>';
+  if(r.result==='SKIP')     return '<span class="rpill sp">n/a</span>';
+  if(r.result==='AI-ADVISORY') return '<span class="rpill aip">AI advisory</span>';
+  if(r.result==='AI-FAIL')  return '<span class="rpill fhp">AI fail</span>';
+  if(r.result==='FLAG')     return r.risk==='HIGH'?'<span class="rpill fhp">HIGH</span>':r.risk==='MEDIUM'?'<span class="rpill fmp">MED</span>':'<span class="rpill fep">exc.</span>';
   return '';
 }
+
 function rrow(r){
   const hasAI=r.aiResult&&aiEnabled();
   const aiBlock=hasAI?`<div class="ai-finding">${r.aiResult.finding||''}</div><div class="ai-conf">AI confidence: ${Math.round((r.aiResult.confidence||0)*100)}%</div>`:'';
-  const f=[r.note?`<div class="fm">${r.note}</div>`:'',r.source?`<div class="fsrc">${r.source}</div>`:'',r.loc?`<div class="floc">${r.loc}</div>`:'',aiBlock].filter(Boolean).join('');
+  const isFailing=r.result==='FAIL'||r.result==='ADVISORY'||r.result==='AI-FAIL'||r.result==='AI-ADVISORY';
+  const suggBlock=isFailing&&SUGGESTIONS[r.id]?`<div class="sugg-box">💡 ${SUGGESTIONS[r.id]}</div>`:'';
+  const f=[r.note?`<div class="fm">${r.note}</div>`:'',r.source?`<div class="fsrc">${r.source}</div>`:'',r.loc?`<div class="floc">${r.loc}</div>`:'',aiBlock,suggBlock].filter(Boolean).join('');
   return `<tr><td class="cid"><span class="rid">${r.id||''}</span></td><td class="crule"><span style="font-size:12px;color:var(--text)">${r.title||''}</span></td><td class="cres">${rpill(r)}</td><td class="cfind">${f||'—'}</td></tr>`;
 }
+
 function secBlock(label,results,isAI=false){
   if(!results||!results.length) return '';
   const aiBadge=isAI&&aiEnabled()?`<span class="ai-badge-s">AI</span>`:'';
   return `<div class="slbl">${label} <span style="color:var(--muted);font-size:9px">(${results.length})</span>${aiBadge}</div>
-  <table class="rt"><thead><tr><th class="cid">Rule</th><th class="crule">Check</th><th class="cres">Result</th><th class="cfind">Finding · source · location</th></tr></thead>
+  <table class="rt"><thead><tr><th class="cid">Rule</th><th class="crule">Check</th><th class="cres">Result</th><th class="cfind">Finding · source · suggestion</th></tr></thead>
   <tbody>${results.map(rrow).join('')}</tbody></table>`;
 }
+
 function sumBadge(results){
   const bl=results.filter(r=>r.result==='FAIL'&&r.blocking).length;
   const fa=results.filter(r=>r.result==='FAIL'&&!r.blocking).length;
@@ -731,9 +963,12 @@ function renderResults(issueR,prR,msLabel){
   const aiFlags=allR.filter(r=>r.result?.startsWith('AI')).length;
   const passes=allR.filter(r=>r.result==='PASS').length;
 
-  let html=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+  let html=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <div style="font-size:11px;font-family:var(--mono);color:var(--muted)">Milestone: <span style="color:var(--text)">${msLabel}</span></div>
-    <button class="expbtn" style="margin-left:auto" onclick="exportMD()">↓ export .md</button>
+    <div style="margin-left:auto;display:flex;gap:6px">
+      <button class="expbtn" onclick="exportMD()">↓ .md</button>
+      <button class="expbtn" onclick="exportXLSX()">↓ .xlsx</button>
+    </div>
   </div>
   <div class="sbar">
     <div class="si"><div class="sl">Issues</div><div class="sv">${issueR.length}</div></div>
@@ -744,72 +979,172 @@ function renderResults(issueR,prR,msLabel){
     <div class="si"><div class="sl">Advisory</div><div class="sv ${warns>0?'y':'g'}">${warns}</div></div>
     ${aiEnabled()?`<div class="si"><div class="sl">AI flags</div><div class="sv ${aiFlags>0?'p':'g'}">${aiFlags}</div></div>`:''}
     <div class="si"><div class="sl">Passed</div><div class="sv g">${passes}</div></div>
-  </div>`;
+  </div>
+  <div style="font-size:10px;font-family:var(--mono);color:var(--muted)">Uncheck the export box on cards to exclude from .md / .xlsx export.</div>`;
 
-  const groups=[
-    {key:'SR',label:'Standard Requests',pcls:'gsr',items:issueR.filter(r=>r.type==='SR'),kind:'issue'},
-    {key:'CR',label:'Change Requests',pcls:'gcr',items:issueR.filter(r=>r.type==='CR'),kind:'issue'},
-    {key:'Patch',label:'Patch Requests',pcls:'gpatch',items:issueR.filter(r=>r.type==='Patch'),kind:'issue'},
-    {key:'PR',label:'Pull Requests',pcls:'gpr',items:prR,kind:'pr'},
-  ];
-  for(const g of groups){
-    if(!g.items.length) continue;
-    html+=`<div class="ghdr"><span class="gpill ${g.pcls}">${g.key}</span>${g.label} <span style="color:var(--muted);font-size:10px">${g.items.length} item(s)</span></div>`;
-    for(const r of g.items){
+  // ── QG-1 cluster ──
+  if(issueR.length){
+    html+=`<div class="gate-hdr"><span class="gpill gqg1">QG-1</span><span class="gate-hdr-lbl">Issues</span><span style="color:var(--muted);font-size:10px;font-family:var(--mono)">${issueR.length} item(s)</span></div>`;
+    const groups=[
+      {key:'SR',label:'Standard Requests',pcls:'gsr'},
+      {key:'CR',label:'Change Requests',pcls:'gcr'},
+      {key:'Patch',label:'Patch Requests',pcls:'gpatch'},
+    ];
+    for(const g of groups){
+      const items=issueR.filter(r=>r.type===g.key);
+      if(!items.length) continue;
+      html+=`<div class="ghdr"><span class="gpill ${g.pcls}">${g.key}</span>${g.label} <span style="color:var(--muted);font-size:10px">${items.length} item(s)</span></div>`;
+      for(const r of items){
+        const num=r.item.number,title=r.item.title;
+        const ghUrl=`https://github.com/${OW}/${RE}/issues/${num}`;
+        const uid=`issue-${num}`;
+        const badge=sumBadge(r.qg1);
+        const aiRan=r.qg1.some(x=>x.aiResult);
+        const aiBadgeH=aiRan?'<span class="badge bai">AI</span>':'';
+        html+=`<div class="card">
+          <div class="ch" onclick="tog2('${uid}')">
+            <span class="inum">#${num}</span><span class="ititle">${title}</span>
+            <div class="ibadges">
+              <span class="badge bgate">QG1</span><span class="badge btype">${r.type}</span>${badge}${aiBadgeH}
+              <a href="${ghUrl}" target="_blank" class="ghl" onclick="event.stopPropagation()">↗ GH</a>
+              <label class="export-chk" onclick="event.stopPropagation()" title="Include in export">
+                <input type="checkbox" id="exp-issue-${num}" checked><span>export</span>
+              </label>
+            </div>
+            <span class="chev" id="chev-${uid}">›</span>
+          </div>
+          <div class="cb" id="cb-${uid}">${secBlock('QG1 – Issue completeness',r.qg1,true)}</div>
+        </div>`;
+      }
+    }
+  }
+
+  // ── QG-2 cluster ──
+  if(prR.length){
+    html+=`<div class="gate-hdr"><span class="gpill gqg2">QG-2</span><span class="gate-hdr-lbl">Pull Requests</span><span style="color:var(--muted);font-size:10px;font-family:var(--mono)">${prR.length} item(s)</span></div>`;
+    for(const r of prR){
       const num=r.item.number,title=r.item.title;
-      const ghUrl=`https://github.com/${OW}/${RE}/${g.kind==='pr'?'pull':'issues'}/${num}`;
-      const uid=`${g.kind}-${num}`;
-      const allI=g.kind==='issue'?r.qg1:r.qg2;
-      const badge=sumBadge(allI);
-      const aiRan=allI.some(x=>x.aiResult);
-      const gateBadge=g.kind==='issue'?'<span class="badge bgate">QG1</span>':'<span class="badge" style="background:#0f2a1a;color:#4ade80;border:1px solid #1a4a2a">QG2</span>';
+      const ghUrl=`https://github.com/${OW}/${RE}/pull/${num}`;
+      const uid=`pr-${num}`;
+      const badge=sumBadge(r.qg2);
+      const aiRan=r.qg2.some(x=>x.aiResult);
       const aiBadgeH=aiRan?'<span class="badge bai">AI</span>':'';
+      const qg2r=r.qg2.filter(x=>['QG2-01','QG2-02','QG2-12','QG2-13'].includes(x.id));
+      const artr=r.qg2.filter(x=>['QG2-03','QG2-04','QG2-05','QG2-06','QG2-08','QG2-09','QG2-10','QG2-15','QG2-19','QG2-21','QG2-22'].includes(x.id));
+      const bcr=r.qg2.filter(x=>x.id.startsWith('BC-'));
+      const cacr=r.qg2.filter(x=>x.id.startsWith('CAC-'));
+      const crr=r.qg2.filter(x=>x.id.startsWith('CR-'));
+      const dmr=r.qg2.filter(x=>x.id.startsWith('DM-'));
       html+=`<div class="card">
         <div class="ch" onclick="tog2('${uid}')">
           <span class="inum">#${num}</span><span class="ititle">${title}</span>
-          <div class="ibadges">${gateBadge}<span class="badge btype">${r.type||'PR'}</span>${badge}${aiBadgeH}<a href="${ghUrl}" target="_blank" class="ghl">↗ GH</a></div>
+          <div class="ibadges">
+            <span class="badge" style="background:#0f2a1a;color:#4ade80;border:1px solid #1a4a2a">QG2</span>${badge}${aiBadgeH}
+            <a href="${ghUrl}" target="_blank" class="ghl" onclick="event.stopPropagation()">↗ GH</a>
+            <label class="export-chk" onclick="event.stopPropagation()" title="Include in export">
+              <input type="checkbox" id="exp-pr-${num}" checked><span>export</span>
+            </label>
+          </div>
           <span class="chev" id="chev-${uid}">›</span>
         </div>
-        <div class="cb" id="cb-${uid}">`;
-      if(g.kind==='issue'){
-        html+=secBlock('QG1 – Issue completeness',r.qg1,true);
-      } else {
-        const qg2r=r.qg2.filter(x=>['QG2-01','QG2-02','QG2-12','QG2-13'].includes(x.id));
-        const artr=r.qg2.filter(x=>['QG2-03','QG2-04','QG2-05','QG2-06','QG2-08','QG2-09','QG2-10','QG2-15','QG2-19','QG2-21','QG2-22'].includes(x.id));
-        const bcr=r.qg2.filter(x=>x.id.startsWith('BC-'));
-        const cacr=r.qg2.filter(x=>x.id.startsWith('CAC-'));
-        const dmr=r.qg2.filter(x=>x.id.startsWith('DM-'));
-        html+=secBlock('QG2 Part 1 – PR body',qg2r,true);
-        html+=secBlock(`QG2 Part 2 – Artifacts (${r.files.length} files)`,artr,true);
-        html+=secBlock('QG2 Part 3 – Backward compatibility (diff)',bcr,true);
-        html+=secBlock('QG2 Part 4 – CAC',cacr,true);
-        if(dmr.length)html+=secBlock('Data model checks (placeholder)',dmr,false);
-      }
-      html+=`</div></div>`;
+        <div class="cb" id="cb-${uid}">
+          ${secBlock('QG2 Part 1 – PR body',qg2r,true)}
+          ${secBlock(`QG2 Part 2 – Artifacts (${r.files.length} files)`,artr,true)}
+          ${secBlock('QG2 Part 3 – Backward compatibility (diff)',bcr,true)}
+          ${secBlock('QG2 Part 4 – CAC',cacr,true)}
+          ${crr.length?secBlock('CR coherence – ChangeLog · SemVer · Plan alignment',crr,true):''}
+          ${dmr.length?secBlock('Data model checks (placeholder)',dmr,false):''}
+        </div>
+      </div>`;
     }
   }
-  if(!issueR.length&&!prR.length)html+=`<div class="empty"><div style="font-size:24px;opacity:.3">∅</div><div>No items found.</div></div>`;
+
+  if(!issueR.length&&!prR.length) html+=`<div class="empty"><div style="font-size:24px;opacity:.3">∅</div><div>No items found.</div></div>`;
   document.getElementById('mp').innerHTML=html;
   window._LR={issueR,prR};
 }
+
 function tog2(uid){const cb=document.getElementById('cb-'+uid),ch=document.getElementById('chev-'+uid);const op=cb.classList.toggle('op');ch.classList.toggle('op',op);}
 
-// ── Export ────────────────────────────────────────────────────────────────────
+function exportSelected(num,type){
+  const cb=document.getElementById(`exp-${type}-${num}`);
+  return cb?cb.checked:true;
+}
+
+// ── Export MD ──────────────────────────────────────────────────────���──────────
 function exportMD(){
   const d=window._LR;if(!d)return;
-  const ic=r=>({PASS:'✅',FAIL:r.blocking?'🚫':'❌',ADVISORY:'⚠️',SKIP:'–','AI-ADVISORY':'🤖⚠️','AI-FAIL':'🤖❌',FLAG:r.risk==='HIGH'?'🔴':'🟡'})[r.result]||'–';
-  const tbl=rows=>`| | Rule | Result | Finding | AI Finding |\n|---|---|---|---|---|\n`+rows.map(r=>`| ${ic(r)} | \`${r.id}\` ${r.title} | ${r.result} | ${r.note||'—'} | ${r.aiResult?.finding||'—'} |`).join('\n');
-  let md=`# TC4S Review Report\n\n**Date:** ${new Date().toISOString().split('T')[0]}  \n**Repo:** ${OW}/${RE}  \n**AI:** ${aiEnabled()?'enabled ('+getAIProvider()+')':'disabled'}\n\n---\n\n`;
+  const ic=r=>({PASS:'✅',FAIL:r.blocking?'🚫':'❌',ADVISORY:'⚠️',SKIP:'–','AI-ADVISORY':'🤖⚠️','AI-FAIL':'🤖❌'})[r.result]||'–';
+  const tbl=rows=>`| | Rule | Result | Finding | AI Finding | Suggestion |\n|---|---|---|---|---|---|\n`+
+    rows.filter(r=>r.result!=='SKIP').map(r=>`| ${ic(r)} | \`${r.id}\` ${r.title} | ${r.result} | ${r.note||'—'} | ${r.aiResult?.finding||'—'} | ${(r.result==='FAIL'||r.result==='ADVISORY')?(SUGGESTIONS[r.id]||'—'):'—'} |`).join('\n');
+  let md=`# TC4S Review Report\n\n**Date:** ${new Date().toISOString().split('T')[0]}  \n**Repo:** ${OW}/${RE}  \n**AI:** ${aiEnabled()?'enabled ('+getAIProvider()+')':'disabled'}\n\n---\n\n## QG-1 – Issues\n\n`;
   for(const g of [{k:'SR',l:'Standard Requests'},{k:'CR',l:'Change Requests'},{k:'Patch',l:'Patch Requests'}]){
-    const items=d.issueR.filter(r=>r.type===g.k);if(!items.length)continue;
-    md+=`## ${g.l}\n\n`;
-    for(const r of items){md+=`### Issue #${r.item.number}: ${r.item.title}\n\n[→ GitHub](https://github.com/${OW}/${RE}/issues/${r.item.number})\n\n${tbl(r.qg1)}\n\n---\n\n`;}
+    const items=d.issueR.filter(r=>r.type===g.k&&exportSelected(r.item.number,'issue'));
+    if(!items.length) continue;
+    md+=`### ${g.l}\n\n`;
+    for(const r of items) md+=`#### Issue #${r.item.number}: ${r.item.title}\n\n[→ GitHub](https://github.com/${OW}/${RE}/issues/${r.item.number})\n\n${tbl(r.qg1)}\n\n---\n\n`;
   }
-  if(d.prR.length){md+=`## Pull Requests\n\n`;for(const r of d.prR){md+=`### PR #${r.item.number}: ${r.item.title}\n\n[→ GitHub](https://github.com/${OW}/${RE}/pull/${r.item.number})\n\n${tbl(r.qg2)}\n\n---\n\n`;}}
+  const exportPRs=d.prR.filter(r=>exportSelected(r.item.number,'pr'));
+  if(exportPRs.length){
+    md+=`## QG-2 – Pull Requests\n\n`;
+    for(const r of exportPRs) md+=`### PR #${r.item.number}: ${r.item.title}\n\n[→ GitHub](https://github.com/${OW}/${RE}/pull/${r.item.number})\n\n${tbl(r.qg2)}\n\n---\n\n`;
+  }
   const a=document.createElement('a');a.href='data:text/markdown;charset=utf-8,'+encodeURIComponent(md);a.download=`tc4s-report-${new Date().toISOString().split('T')[0]}.md`;a.click();
 }
 
-// ── Fallback rules (used if YAML fetch fails) ─────────────────────────────────
+// ── Export XLSX ───────────────────────────────────────────────────────────────
+function exportXLSX(){
+  const d=window._LR;if(!d)return;
+  const wb=XLSX.utils.book_new();
+
+  // Summary sheet
+  const allR=[...d.issueR.flatMap(r=>r.qg1),...d.prR.flatMap(r=>r.qg2)];
+  const blocking=allR.filter(r=>r.result==='FAIL'&&r.blocking).length;
+  const sumRows=[
+    ['TC4S Review Report'],
+    ['Date',new Date().toISOString().split('T')[0]],
+    ['Repository',`${OW}/${RE}`],
+    ['AI',aiEnabled()?'enabled ('+getAIProvider()+')':'disabled'],
+    [],
+    ['Issues reviewed',d.issueR.filter(r=>exportSelected(r.item.number,'issue')).length],
+    ['PRs reviewed',d.prR.filter(r=>exportSelected(r.item.number,'pr')).length],
+    ['Blocking failures',blocking],
+    ['Total failures',allR.filter(r=>r.result==='FAIL').length],
+    ['Total advisory',allR.filter(r=>r.result==='ADVISORY').length],
+    ['Passed',allR.filter(r=>r.result==='PASS').length],
+  ];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sumRows),'Summary');
+
+  // QG1 Issues sheet
+  const qg1Hdr=['#','Title','Type','Rule ID','Rule','Result','Finding','Source','Location','AI Finding','AI Confidence','Suggestion'];
+  const qg1Rows=[qg1Hdr];
+  for(const r of d.issueR){
+    if(!exportSelected(r.item.number,'issue')) continue;
+    for(const chk of r.qg1){
+      if(chk.result==='SKIP') continue;
+      const isFailing=chk.result==='FAIL'||chk.result==='ADVISORY'||chk.result==='AI-FAIL'||chk.result==='AI-ADVISORY';
+      qg1Rows.push([r.item.number,r.item.title,r.type,chk.id,chk.title,chk.result,chk.note||'',chk.source||'',chk.loc||'',chk.aiResult?.finding||'',chk.aiResult?Math.round((chk.aiResult.confidence||0)*100)+'%':'',isFailing?(SUGGESTIONS[chk.id]||''):'']);
+    }
+  }
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(qg1Rows),'QG1 Issues');
+
+  // QG2 PRs sheet
+  const qg2Hdr=['#','Title','Rule ID','Rule','Result','Finding','Source','Location','AI Finding','AI Confidence','Suggestion'];
+  const qg2Rows=[qg2Hdr];
+  for(const r of d.prR){
+    if(!exportSelected(r.item.number,'pr')) continue;
+    for(const chk of r.qg2){
+      if(chk.result==='SKIP') continue;
+      const isFailing=chk.result==='FAIL'||chk.result==='ADVISORY'||chk.result==='AI-FAIL'||chk.result==='AI-ADVISORY';
+      qg2Rows.push([r.item.number,r.item.title,chk.id,chk.title,chk.result,chk.note||'',chk.source||'',chk.loc||'',chk.aiResult?.finding||'',chk.aiResult?Math.round((chk.aiResult.confidence||0)*100)+'%':'',isFailing?(SUGGESTIONS[chk.id]||''):'']);
+    }
+  }
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(qg2Rows),'QG2 PRs');
+
+  XLSX.writeFile(wb,`tc4s-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+// ── Fallback rules ────────────────────────────────────────────────────────────
 const FALLBACK_QG1=[
   {id:'QG1-01',title:'Management Summary present and filled',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse the Management Summary. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
   {id:'QG1-02',title:'Domain Manager label; >=3 companies',status:'Active',enabled:true,ai_check:false},
@@ -824,19 +1159,17 @@ const FALLBACK_QG1=[
 const FALLBACK_QG2=[
   {id:'QG2-01',title:'PR checklist completed',status:'Active',enabled:true,ai_check:false},
   {id:'QG2-02',title:'Management Summary (1.1-1.5)',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse PR Management Summary sections 1.1-1.5. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
-  {id:'QG2-08',title:'BC confirmed in Section 1.5',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse BC statement in Section 1.5. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
-  {id:'BC-PR-01',title:'MUST changed in diff',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse MUST statement changes in diff for breaking potential. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'BC-PR-01',title:'MUST changed in diff',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse MUST statement changes. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
   {id:'CAC-01',title:'CAC section present',status:'Active',enabled:true,ai_check:false},
-  {id:'CAC-02',title:'CAC categorised',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse CAC categorisation quality. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
-  {id:'CAC-03',title:'No vague language in CAC',status:'Active',enabled:true,ai_check:true,ai_prompt:'Check CAC criteria for vague language. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'CAC-02',title:'CAC categorised',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse CAC categorisation. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'CAC-03',title:'No vague language in CAC',status:'Active',enabled:true,ai_check:true,ai_prompt:'Check CAC for vague language. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
   {id:'DM-01',title:'[PLACEHOLDER] Aspect model diff',status:'Active',enabled:false,ai_check:false,placeholder:true},
 ];
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ── Init ────────────────────────────────────────────────────────────────────���─
 window.addEventListener('DOMContentLoaded',async()=>{
   const t=loadTok();if(t){document.getElementById('tok').value=t;const h=Math.max(0,Math.round(((+localStorage.getItem(TE)||0)-Date.now())/36e5));document.getElementById('th-tok').textContent=`Token cached ~${h}h`;document.getElementById('th-tok').className='th ok';}
   const ak=sessionStorage.getItem('tc4s_aikey');if(ak)document.getElementById('ai-key').value=ak;
-  renderItems();
   await loadRules();
 });
 </script>
