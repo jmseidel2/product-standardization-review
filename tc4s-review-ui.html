@@ -815,6 +815,11 @@ function renderSelectionPanel(msIssues,msPRs,otherIssues,otherPRs,msLabel){
       <div style="font-size:11px;color:var(--muted)">${allMs.length+allOther.length} total found</div>
     </div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:5px;padding:7px 13px;background:var(--bg3);border-bottom:1px solid var(--border)">
+        <span style="font-size:10px;font-family:var(--mono);color:var(--muted)">Select items:</span>
+        <button class="expbtn" style="padding:2px 8px;font-size:10px" onclick="selAll('all',true)">All</button>
+        <button class="expbtn" style="padding:2px 8px;font-size:10px" onclick="selAll('all',false)">None</button>
+      </div>
       ${msSection}${otherSection}${noItems}
     </div>
     <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">Check items to include, then click "② Run review" in the sidebar.</div>`;
@@ -830,10 +835,12 @@ function toggleOtherSection(){
 }
 
 function selAll(group,val){
+  if(group==='all'){document.querySelectorAll('input[name="sel-item"]').forEach(cb=>cb.checked=val);return;}
   const container=document.getElementById(`sel-${group}-items`);
   if(!container) return;
   container.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=val);
 }
+function setAllExport(val){document.querySelectorAll('[id^="exp-"]').forEach(cb=>cb.checked=val);}
 
 function getSelected(){
   const f=window._FETCH;
@@ -927,21 +934,24 @@ function rpill(r){
   return '';
 }
 
-function rrow(r){
+function rrow(r,itemUrl=''){
   const hasAI=r.aiResult&&aiEnabled();
   const aiBlock=hasAI?`<div class="ai-finding">${r.aiResult.finding||''}</div><div class="ai-conf">AI confidence: ${Math.round((r.aiResult.confidence||0)*100)}%</div>`:'';
   const isFailing=r.result==='FAIL'||r.result==='ADVISORY'||r.result==='AI-FAIL'||r.result==='AI-ADVISORY';
   const suggBlock=isFailing&&SUGGESTIONS[r.id]?`<div class="sugg-box">💡 ${SUGGESTIONS[r.id]}</div>`:'';
-  const f=[r.note?`<div class="fm">${r.note}</div>`:'',r.source?`<div class="fsrc">${r.source}</div>`:'',r.loc?`<div class="floc">${r.loc}</div>`:'',aiBlock,suggBlock].filter(Boolean).join('');
+  const locHtml=r.loc?(itemUrl
+    ?`<a href="${itemUrl}" target="_blank" class="floc" style="text-decoration:none">${r.loc} ↗</a>`
+    :`<div class="floc">${r.loc}</div>`):'';
+  const f=[r.note?`<div class="fm">${r.note}</div>`:'',r.source?`<div class="fsrc">${r.source}</div>`:'',locHtml,aiBlock,suggBlock].filter(Boolean).join('');
   return `<tr><td class="cid"><span class="rid">${r.id||''}</span></td><td class="crule"><span style="font-size:12px;color:var(--text)">${r.title||''}</span></td><td class="cres">${rpill(r)}</td><td class="cfind">${f||'—'}</td></tr>`;
 }
 
-function secBlock(label,results,isAI=false){
+function secBlock(label,results,isAI=false,itemUrl=''){
   if(!results||!results.length) return '';
   const aiBadge=isAI&&aiEnabled()?`<span class="ai-badge-s">AI</span>`:'';
   return `<div class="slbl">${label} <span style="color:var(--muted);font-size:9px">(${results.length})</span>${aiBadge}</div>
   <table class="rt"><thead><tr><th class="cid">Rule</th><th class="crule">Check</th><th class="cres">Result</th><th class="cfind">Finding · source · suggestion</th></tr></thead>
-  <tbody>${results.map(rrow).join('')}</tbody></table>`;
+  <tbody>${results.map(r=>rrow(r,itemUrl)).join('')}</tbody></table>`;
 }
 
 function sumBadge(results){
@@ -965,7 +975,11 @@ function renderResults(issueR,prR,msLabel){
 
   let html=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <div style="font-size:11px;font-family:var(--mono);color:var(--muted)">Milestone: <span style="color:var(--text)">${msLabel}</span></div>
-    <div style="margin-left:auto;display:flex;gap:6px">
+    <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+      <span style="font-size:10px;font-family:var(--mono);color:var(--muted)">Export:</span>
+      <button class="expbtn" style="padding:3px 8px;font-size:10px" onclick="setAllExport(true)">All</button>
+      <button class="expbtn" style="padding:3px 8px;font-size:10px" onclick="setAllExport(false)">None</button>
+      <div style="width:1px;height:16px;background:var(--border);margin:0 2px"></div>
       <button class="expbtn" onclick="exportMD()">↓ .md</button>
       <button class="expbtn" onclick="exportXLSX()">↓ .xlsx</button>
     </div>
@@ -1013,7 +1027,7 @@ function renderResults(issueR,prR,msLabel){
             </div>
             <span class="chev" id="chev-${uid}">›</span>
           </div>
-          <div class="cb" id="cb-${uid}">${secBlock('QG1 – Issue completeness',r.qg1,true)}</div>
+          <div class="cb" id="cb-${uid}">${secBlock('QG1 – Issue completeness',r.qg1,true,ghUrl)}</div>
         </div>`;
       }
     }
@@ -1048,11 +1062,11 @@ function renderResults(issueR,prR,msLabel){
           <span class="chev" id="chev-${uid}">›</span>
         </div>
         <div class="cb" id="cb-${uid}">
-          ${secBlock('QG2 Part 1 – PR body',qg2r,true)}
-          ${secBlock(`QG2 Part 2 – Artifacts (${r.files.length} files)`,artr,true)}
-          ${secBlock('QG2 Part 3 – Backward compatibility (diff)',bcr,true)}
-          ${secBlock('QG2 Part 4 – CAC',cacr,true)}
-          ${crr.length?secBlock('CR coherence – ChangeLog · SemVer · Plan alignment',crr,true):''}
+          ${secBlock('QG2 Part 1 – PR body',qg2r,true,ghUrl)}
+          ${secBlock(`QG2 Part 2 – Artifacts (${r.files.length} files)`,artr,true,ghUrl+'/files')}
+          ${secBlock('QG2 Part 3 – Backward compatibility (diff)',bcr,true,ghUrl+'/files')}
+          ${secBlock('QG2 Part 4 – CAC',cacr,true,ghUrl+'/files')}
+          ${crr.length?secBlock('CR coherence – ChangeLog · SemVer · Plan alignment',crr,true,ghUrl+'/files'):''}
           ${dmr.length?secBlock('Data model checks (placeholder)',dmr,false):''}
         </div>
       </div>`;
