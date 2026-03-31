@@ -1,0 +1,54 @@
+# TC4S Automated Review — GitHub Actions
+# Runs rule-based QG1/QG2 checks automatically when Issues or PRs are opened/edited.
+# Posts a structured review comment. Does NOT run AI checks (no API key in CI).
+
+name: TC4S Automated Review
+
+on:
+  issues:
+    types: [opened, edited, labeled, reopened]
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled]
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+
+jobs:
+  tc4s-review:
+    name: TC4S QG1/QG2 automated check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install js-yaml @octokit/rest
+        working-directory: .
+
+      - name: Run TC4S review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title || github.event.pull_request.title }}
+          ISSUE_BODY: ${{ github.event.issue.body || github.event.pull_request.body }}
+          ISSUE_LABELS: ${{ toJson(github.event.issue.labels || github.event.pull_request.labels) }}
+          PR_MILESTONE: ${{ github.event.pull_request.milestone.title || '' }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
+        run: |
+          if [ "$EVENT_NAME" = "issues" ]; then
+            node .github/scripts/ci-qg1-review.js
+          else
+            node .github/scripts/ci-qg2-review.js
+          fi

@@ -1,0 +1,42 @@
+# AI Provider Configuration
+# Configure which AI provider to use for semantic rule checks.
+# The review tool will use this config when AI-enhanced checks are enabled.
+#
+# Supported providers:
+#   claude    — Anthropic Claude API (claude-sonnet-4-20250514 recommended)
+#   openai    — OpenAI-compatible endpoint (works with Blockbrain and others)
+#   custom    — Any OpenAI-compatible endpoint via custom base_url
+#
+# Token is read from browser sessionStorage (entered in UI settings).
+# It is NEVER committed to the repository.
+
+ai:
+  enabled: false                     # global AI toggle (overrides per-rule settings)
+  provider: claude                   # claude | openai | custom
+  model: claude-sonnet-4-20250514    # model name for the selected provider
+  base_url: ""                       # leave empty for claude/openai; set for custom
+  max_tokens: 400                    # keep low — findings should be concise
+  temperature: 0.1                   # low temperature for deterministic analysis
+
+  # System prompt prepended to every AI rule check
+  system_prompt: >
+    You are a TC4S (Technical Committee for Standardisation) reviewer for
+    Catena-X standards. You review GitHub Issues and Pull Requests against
+    defined quality rules. Be precise, objective, and concise.
+    Always respond with valid JSON in the exact format requested.
+    Do not add explanations outside the JSON structure.
+
+  # Per-rule group toggles (override global enabled setting per category)
+  rule_groups:
+    qg1_completeness: true      # semantic check of Issue content
+    qg2_pr_body: true           # semantic check of PR Management Summary
+    qg2_bc_analysis: true       # AI-enhanced BC risk assessment from diff
+    qg2_cac_quality: true       # CAC criteria quality analysis
+    qg2_normative_language: true # MUST/MAY/SHOULD usage analysis
+
+  # Blockbrain configuration (if provider = custom)
+  # Uncomment and fill in when using Blockbrain
+  # blockbrain:
+  #   base_url: "https://your-blockbrain-endpoint/v1"
+  #   model: "your-model-name"
+  #   Note: Set API key in UI settings — never in this file

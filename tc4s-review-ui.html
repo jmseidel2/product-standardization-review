@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>TC4S Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+<style>
+:root{
+  --bg:#0d0f12;--bg2:#141720;--bg3:#1c2030;
+  --border:#2a2f3d;--border2:#3a4055;
+  --text:#e8eaf0;--muted:#6b7280;
+  --accent:#4f9cf9;--accent2:#2563eb;
+  --green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--purple:#a78bfa;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;
+  display:grid;grid-template-columns:300px 1fr;grid-template-rows:48px 1fr}
+header{grid-column:1/-1;background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:12px}
+.logo{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--accent);letter-spacing:.08em}
+.logo span{color:var(--muted)}
+.hst{margin-left:auto;font-size:11px;font-family:var(--mono);color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.dot.ok{background:var(--green)}.dot.err{background:var(--red)}.dot.ai{background:var(--purple)}
+aside{background:var(--bg2);border-right:1px solid var(--border);
+  overflow-y:auto;display:flex;flex-direction:column}
+.tabs-nav{display:flex;border-bottom:1px solid var(--border)}
+.tnav{flex:1;padding:10px 0;font-size:11px;font-family:var(--mono);text-align:center;
+  cursor:pointer;color:var(--muted);border:none;background:transparent;
+  border-bottom:2px solid transparent;transition:all .15s}
+.tnav.on{color:var(--text);border-bottom-color:var(--accent)}
+.tpanel{display:none;padding:14px;flex-direction:column;gap:16px;flex:1}
+.tpanel.on{display:flex}
+.sb h4{font-size:10px;font-family:var(--mono);letter-spacing:.1em;color:var(--muted);
+  text-transform:uppercase;margin-bottom:8px}
+label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;font-family:var(--mono)}
+input[type=text],input[type=password],select{width:100%;background:var(--bg3);
+  border:1px solid var(--border);border-radius:6px;color:var(--text);
+  font-family:var(--mono);font-size:12px;padding:6px 9px;margin-bottom:8px;
+  outline:none;transition:border-color .15s}
+input:focus,select:focus{border-color:var(--accent)}
+select option{background:var(--bg3)}
+.tr{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
+.tog{font-size:11px;font-family:var(--mono);padding:3px 9px;border-radius:20px;
+  border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .12s}
+.tog.on{background:var(--accent2);border-color:var(--accent);color:#fff}
+.rbtn{width:100%;padding:9px;background:var(--accent2);border:none;border-radius:8px;
+  color:#fff;font-family:var(--mono);font-size:12px;cursor:pointer;transition:background .15s}
+.rbtn:hover{background:var(--accent)}.rbtn.sec{background:var(--bg3);border:1px solid var(--border2);margin-bottom:5px}
+.ie{display:grid;grid-template-columns:60px 1fr 22px;gap:3px;margin-bottom:4px;align-items:center}
+.ie input,.ie select{margin-bottom:0;font-size:11px}.ie select{padding:6px 4px}
+.rmb{width:22px;height:22px;background:transparent;border:1px solid var(--border);border-radius:4px;
+  color:var(--muted);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+.rmb:hover{border-color:var(--red);color:var(--red)}
+.addb{font-size:11px;font-family:var(--mono);background:transparent;border:1px dashed var(--border2);
+  border-radius:6px;color:var(--muted);width:100%;padding:4px;cursor:pointer;transition:all .15s}
+.addb:hover{border-color:var(--accent);color:var(--accent)}
+.th{font-size:10px;color:var(--muted);line-height:1.5;margin-top:-5px;margin-bottom:7px}
+.th.ok{color:var(--green)}.th.ai-on{color:var(--purple)}
+
+/* AI toggle row */
+.ai-row{display:flex;align-items:center;gap:8px;padding:8px 10px;
+  background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:8px}
+.ai-label{font-size:11px;font-family:var(--mono);color:var(--muted);flex:1}
+.ai-label.on{color:var(--purple)}
+.sw{position:relative;width:30px;height:16px;flex-shrink:0}
+.sw input{opacity:0;width:0;height:0}
+.sw-track{position:absolute;inset:0;background:var(--border2);border-radius:8px;cursor:pointer;transition:background .2s}
+.sw input:checked~.sw-track{background:#7f39fb}
+.sw-thumb{position:absolute;top:2px;left:2px;width:12px;height:12px;background:#fff;border-radius:50%;
+  transition:transform .2s;pointer-events:none}
+.sw input:checked~.sw-track .sw-thumb{transform:translateX(14px)}
+
+/* Rule editor */
+.rule-item{background:var(--bg3);border:1px solid var(--border);border-radius:7px;
+  padding:8px 10px;margin-bottom:5px;display:flex;align-items:center;gap:8px}
+.ri-id{font-size:10px;font-family:var(--mono);color:var(--muted);min-width:64px}
+.ri-title{font-size:11px;flex:1;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ri-badges{display:flex;gap:4px;flex-shrink:0}
+.rbadge{font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:3px;font-weight:500}
+.rb-act{background:#0f2a1a;color:#4ade80}.rb-rec{background:#2a1e0a;color:#fbbf24}
+.rb-off{background:var(--bg);color:var(--muted)}
+.rb-ai{background:#1e1040;color:#a78bfa}
+
+main{overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:12px}
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;color:var(--muted);font-family:var(--mono);font-size:12px}
+.spin{width:24px;height:24px;border:2px solid var(--border2);border-top-color:var(--accent);
+  border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.sbar{background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  padding:11px 16px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.si{display:flex;flex-direction:column;gap:2px}
+.sl{font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+.sv{font-size:20px;font-weight:300;font-family:var(--mono)}
+.sv.r{color:var(--red)}.sv.g{color:var(--green)}.sv.y{color:var(--yellow)}.sv.p{color:var(--purple)}
+.sdiv{width:1px;height:32px;background:var(--border)}
+.ghdr{font-size:10px;font-family:var(--mono);font-weight:500;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);padding:7px 0 5px;
+  border-bottom:1px solid var(--border);margin-bottom:7px;display:flex;align-items:center;gap:7px}
+.gpill{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500}
+.gsr{background:#1a2540;color:#7db4f7;border:1px solid #2a3a60}
+.gcr{background:#1f1a30;color:#c4b5fd;border:1px solid #3a2a60}
+.gpatch{background:#1a2a1a;color:#86efac;border:1px solid #2a4a2a}
+.gpr{background:#0f2a1a;color:#4ade80;border:1px solid #1a4a2a}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:5px}
+.ch{padding:9px 13px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border);
+  cursor:pointer;user-select:none;background:var(--bg3)}
+.ch:hover{background:#1e2438}
+.inum{font-family:var(--mono);font-size:11px;color:var(--accent);background:#1a2540;
+  padding:2px 6px;border-radius:4px;border:1px solid #2a3a60;white-space:nowrap}
+.ititle{font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ibadges{display:flex;gap:4px;flex-shrink:0}
+.badge{font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:4px;font-weight:500;white-space:nowrap}
+.bgate{background:#1a2540;color:#7db4f7;border:1px solid #2a3a60}
+.btype{background:#1e2535;color:var(--muted);border:1px solid var(--border)}
+.bpass{background:#0f2a1a;color:var(--green);border:1px solid #1a4a2a}
+.bfail{background:#2a0f0f;color:var(--red);border:1px solid #4a1a1a}
+.bwarn{background:#2a1f0a;color:var(--yellow);border:1px solid #4a3a1a}
+.bai{background:#1e1040;color:#a78bfa;border:1px solid #3a2060}
+.ghl{font-size:10px;color:var(--accent);font-family:var(--mono);text-decoration:none;
+  padding:2px 5px;border:1px solid #2a3a60;border-radius:4px;background:#1a2540}
+.ghl:hover{background:#243060}
+.chev{color:var(--muted);font-size:11px;transition:transform .15s;flex-shrink:0}
+.chev.op{transform:rotate(90deg)}
+.cb{display:none}.cb.op{display:block}
+.slbl{font-size:10px;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);padding:6px 13px 4px;background:var(--bg);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:6px}
+.ai-badge-s{font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:3px;
+  background:#1e1040;color:#a78bfa}
+table.rt{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+table.rt th{font-size:10px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;
+  letter-spacing:.05em;padding:5px 10px;text-align:left;border-bottom:1px solid var(--border);
+  background:var(--bg);font-weight:400}
+table.rt td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+table.rt tr:last-child td{border-bottom:none}
+table.rt tr:hover td{background:#151a24}
+.cid{width:72px}.crule{width:160px}.cres{width:78px}.cfind{}
+.rid{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.rpill{font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:7px;
+  font-weight:500;white-space:nowrap;display:inline-block}
+.pp{background:#0f2a1a;color:#4ade80}.fp{background:#2a0f0f;color:#f87171}
+.bp{background:#3a0a0a;color:#ff6b6b}.wp{background:#2a1e0a;color:#fbbf24}
+.sp{background:var(--bg3);color:var(--muted)}.fhp{background:#2a0f0f;color:#f87171}
+.fmp{background:#2a1e0a;color:#fbbf24}.fep{background:#0f2a1a;color:#4ade80}
+.aip{background:#1e1040;color:#c4b5fd}
+.fm{font-size:12px;color:var(--text);margin-bottom:2px;line-height:1.5}
+.rat{font-size:11px;color:#5a6a80;line-height:1.5;font-style:italic;margin-bottom:2px}
+.fsrc{font-size:10px;font-family:var(--mono);color:#4a5568;padding:1px 0}
+.floc{font-size:10px;font-family:var(--mono);color:var(--accent);background:#1a2540;
+  padding:2px 5px;border-radius:3px;display:inline-block;margin-top:2px}
+.ai-finding{font-size:11px;color:#c4b5fd;background:#1e1040;border:1px solid #3a2060;
+  border-radius:5px;padding:5px 8px;margin-top:4px;line-height:1.5}
+.ai-conf{font-size:10px;font-family:var(--mono);color:#7a5fbc;margin-top:2px}
+.logbox{background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  padding:8px 11px;font-family:var(--mono);font-size:11px;color:var(--muted);
+  max-height:80px;overflow-y:auto;line-height:1.6}
+.lok{color:var(--green)}.lerr{color:var(--red)}.linf{color:var(--accent)}.lai{color:var(--purple)}
+.expbtn{font-size:11px;font-family:var(--mono);padding:5px 11px;border-radius:6px;
+  border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
+.expbtn:hover{border-color:var(--accent);color:var(--accent)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">TC4S<span>/</span>REVIEW</div>
+  <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">catenax-eV / product-standardization-prod</div>
+  <div class="hst">
+    <div class="dot" id="ai-dot" title="AI status"></div>
+    <span id="ai-lbl" style="color:var(--muted);margin-right:8px">AI off</span>
+    <div class="dot" id="conn-dot"></div>
+    <span id="conn-lbl">not connected</span>
+  </div>
+</header>
+
+<aside>
+  <div class="tabs-nav">
+    <button class="tnav on" onclick="sideTab('review')">Review</button>
+    <button class="tnav"    onclick="sideTab('ai')">AI</button>
+    <button class="tnav"    onclick="sideTab('rules')">Rules</button>
+  </div>
+
+  <!-- ── REVIEW TAB ── -->
+  <div class="tpanel on" id="tp-review">
+    <div class="sb">
+      <h4>Connection</h4>
+      <label>GitHub Token</label>
+      <input type="password" id="tok" placeholder="ghp_xxxxxxxxxxxx" oninput="onTok()">
+      <div class="th" id="th-tok">Enter token — cached 12h in browser.</div>
+      <button class="rbtn sec" onclick="testConn()">Test connection</button>
+    </div>
+    <div class="sb">
+      <h4>Scope</h4>
+      <label>Milestone</label>
+      <input type="text" id="ms" placeholder="e.g. 26.06 or CX-Titan">
+      <label>Gate</label>
+      <div class="tr">
+        <button class="tog on" id="tqg1" onclick="tg('qg1')">QG1 Issues</button>
+        <button class="tog on" id="tqg2" onclick="tg('qg2')">QG2 PRs</button>
+      </div>
+    </div>
+    <div class="sb">
+      <h4>Specific items <span style="color:var(--muted);font-weight:300">(optional)</span></h4>
+      <div class="th">Leave empty → all milestone items.</div>
+      <div id="il"></div>
+      <button class="addb" onclick="addItem()">+ add item</button>
+    </div>
+    <div class="sb">
+      <h4>Check categories</h4>
+      <div class="tr">
+        <button class="tog on" id="cqg1"  onclick="tc('qg1rules')">QG1</button>
+        <button class="tog on" id="cbc"   onclick="tc('bc')">BC</button>
+        <button class="tog on" id="cqg2"  onclick="tc('qg2rules')">QG2</button>
+        <button class="tog on" id="ccac"  onclick="tc('cac')">CAC</button>
+      </div>
+    </div>
+    <div style="margin-top:auto">
+      <button class="rbtn" onclick="run()">▶ Run review</button>
+    </div>
+  </div>
+
+  <!-- ── AI TAB ── -->
+  <div class="tpanel" id="tp-ai">
+    <div class="sb">
+      <h4>AI semantic analysis</h4>
+      <div class="ai-row">
+        <span class="ai-label" id="ai-master-lbl">AI checks disabled</span>
+        <label class="sw">
+          <input type="checkbox" id="ai-master" onchange="toggleAI()">
+          <div class="sw-track"><div class="sw-thumb"></div></div>
+        </label>
+      </div>
+      <div class="th" id="ai-global-hint">Enable to use semantic analysis on top of rule-based checks.</div>
+    </div>
+    <div class="sb">
+      <h4>Provider</h4>
+      <label>API provider</label>
+      <select id="ai-provider" onchange="onProviderChange()">
+        <option value="claude">Claude (Anthropic)</option>
+        <option value="openai">OpenAI-compatible</option>
+        <option value="custom">Custom (Blockbrain / other)</option>
+      </select>
+      <label>API Key</label>
+      <input type="password" id="ai-key" placeholder="sk-… or API key" oninput="saveAIKey()">
+      <div class="th" id="ai-key-hint">Stored in sessionStorage only. Never committed.</div>
+      <div id="custom-url-row" style="display:none">
+        <label>Base URL</label>
+        <input type="text" id="ai-baseurl" placeholder="https://api.blockbrain.example/v1" oninput="saveAIKey()">
+      </div>
+      <label>Model</label>
+      <input type="text" id="ai-model" placeholder="claude-sonnet-4-20250514" value="claude-sonnet-4-20250514">
+      <button class="rbtn sec" onclick="testAI()">Test AI connection</button>
+    </div>
+    <div class="sb">
+      <h4>AI check toggles per category</h4>
+      <div class="ai-row" style="margin-bottom:5px">
+        <span class="ai-label" id="ai-qg1-lbl">QG1 content analysis</span>
+        <label class="sw"><input type="checkbox" id="ai-qg1" checked onchange="updateAILabels()"><div class="sw-track"><div class="sw-thumb"></div></div></label>
+      </div>
+      <div class="ai-row" style="margin-bottom:5px">
+        <span class="ai-label" id="ai-pr-lbl">QG2 PR body analysis</span>
+        <label class="sw"><input type="checkbox" id="ai-pr" checked onchange="updateAILabels()"><div class="sw-track"><div class="sw-thumb"></div></div></label>
+      </div>
+      <div class="ai-row" style="margin-bottom:5px">
+        <span class="ai-label" id="ai-bc-lbl">BC semantic analysis</span>
+        <label class="sw"><input type="checkbox" id="ai-bc" checked onchange="updateAILabels()"><div class="sw-track"><div class="sw-thumb"></div></div></label>
+      </div>
+      <div class="ai-row" style="margin-bottom:5px">
+        <span class="ai-label" id="ai-cac-lbl">CAC quality analysis</span>
+        <label class="sw"><input type="checkbox" id="ai-cac" checked onchange="updateAILabels()"><div class="sw-track"><div class="sw-thumb"></div></div></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RULES TAB ── -->
+  <div class="tpanel" id="tp-rules" style="gap:10px">
+    <div class="sb">
+      <h4>Rule status</h4>
+      <div class="th" id="rules-status">Loading rules from YAML…</div>
+    </div>
+    <div class="sb">
+      <h4>QG1 rules</h4>
+      <div id="rl-qg1"></div>
+    </div>
+    <div class="sb">
+      <h4>QG2 + BC + CAC rules</h4>
+      <div id="rl-qg2"></div>
+    </div>
+    <div style="margin-top:auto">
+      <button class="rbtn sec" onclick="reloadRules()">↺ Reload rules from YAML</button>
+    </div>
+  </div>
+</aside>
+
+<main id="mp">
+  <div class="empty"><div style="font-size:28px;opacity:.3">⬡</div><div>Configure and run a review</div></div>
+</main>
+
+<script>
+// ── Constants ─────────────────────────────────────────────────────────────────
+const OW='catenax-eV', RE='product-standardization-prod';
+const RULES_BASE='https://raw.githubusercontent.com/janseidel/product-standardization-review/main/rules/';
+
+// ── Token cache ───────────────────────────────────────────────────────────────
+const TK='tc4s_tok',TE='tc4s_exp';
+function saveTok(t){try{localStorage.setItem(TK,t);localStorage.setItem(TE,Date.now()+12*36e5);}catch{}}
+function loadTok(){try{const e=+localStorage.getItem(TE)||0;if(Date.now()>e){localStorage.removeItem(TK);localStorage.removeItem(TE);return null;}return localStorage.getItem(TK);}catch{return null;}}
+function getTok(){return document.getElementById('tok').value.trim()||loadTok()||'';}
+function onTok(){const t=document.getElementById('tok').value.trim();if(t){saveTok(t);const h=Math.max(0,Math.round(((+localStorage.getItem(TE)||0)-Date.now())/36e5));document.getElementById('th-tok').textContent=`Token cached ~${h}h`;document.getElementById('th-tok').className='th ok';}}
+
+// ── AI key (sessionStorage only) ─────────────────────────────────────────────
+function saveAIKey(){const k=document.getElementById('ai-key').value.trim();const u=document.getElementById('ai-baseurl')?.value.trim()||'';if(k) sessionStorage.setItem('tc4s_aikey',k);if(u) sessionStorage.setItem('tc4s_aiurl',u);}
+function getAIKey(){return document.getElementById('ai-key').value.trim()||sessionStorage.getItem('tc4s_aikey')||'';}
+function getAIUrl(){return document.getElementById('ai-baseurl')?.value.trim()||sessionStorage.getItem('tc4s_aiurl')||'';}
+function getAIModel(){return document.getElementById('ai-model').value.trim()||'claude-sonnet-4-20250514';}
+function getAIProvider(){return document.getElementById('ai-provider').value;}
+function aiEnabled(){return document.getElementById('ai-master').checked && !!getAIKey();}
+function aiGroupOn(g){return document.getElementById('ai-master').checked && document.getElementById('ai-'+g)?.checked;}
+
+function toggleAI(){
+  const on=document.getElementById('ai-master').checked;
+  document.getElementById('ai-master-lbl').textContent=on?'AI checks enabled':'AI checks disabled';
+  document.getElementById('ai-master-lbl').className='ai-label'+(on?' on':'');
+  document.getElementById('ai-dot').className='dot'+(on?' ai':'');
+  document.getElementById('ai-lbl').textContent=on?'AI on':'AI off';
+  document.getElementById('ai-lbl').style.color=on?'var(--purple)':'var(--muted)';
+}
+function updateAILabels(){
+  ['qg1','pr','bc','cac'].forEach(g=>{
+    const on=document.getElementById('ai-'+g)?.checked;
+    document.getElementById('ai-'+g+'-lbl').className='ai-label'+(on?' on':'');
+  });
+}
+function onProviderChange(){
+  const p=getAIProvider();
+  document.getElementById('custom-url-row').style.display=(p==='custom')?'block':'none';
+  document.getElementById('ai-model').value=p==='claude'?'claude-sonnet-4-20250514':p==='openai'?'gpt-4o':'';
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const S={gates:{qg1:true,qg2:true},checks:{qg1rules:true,bc:true,qg2rules:true,cac:true},items:[],rules:{qg1:[],qg2:[]}};
+function tg(k){S.gates[k]=!S.gates[k];document.getElementById('t'+k).classList.toggle('on',S.gates[k]);}
+function tc(k){S.checks[k]=!S.checks[k];const m={qg1rules:'cqg1',bc:'cbc',qg2rules:'cqg2',cac:'ccac'};document.getElementById(m[k]).classList.toggle('on',S.checks[k]);}
+function addItem(n='',t='issue'){S.items.push({num:n,type:t});renderItems();}
+function rmItem(i){S.items.splice(i,1);renderItems();}
+function renderItems(){document.getElementById('il').innerHTML=S.items.map((it,i)=>`<div class="ie"><input type="text" value="${it.num}" placeholder="#NNN" onchange="S.items[${i}].num=this.value.replace('#','')" style="font-size:11px"><select onchange="S.items[${i}].type=this.value"><option value="issue" ${it.type==='issue'?'selected':''}>Issue</option><option value="pr" ${it.type==='pr'?'selected':''}>PR</option></select><button class="rmb" onclick="rmItem(${i})">×</button></div>`).join('');}
+
+function sideTab(t){
+  ['review','ai','rules'].forEach(x=>{
+    document.getElementById('tp-'+x).classList.toggle('on',x===t);
+    document.querySelectorAll('.tnav')[['review','ai','rules'].indexOf(x)].classList.toggle('on',x===t);
+  });
+  if(t==='rules') renderRulesTab();
+}
+
+// ── Load YAML rules ───────────────────────────────────────────────────────────
+async function loadRules(){
+  const base=RULES_BASE;
+  try{
+    const [r1,r2]=await Promise.all([
+      fetch(base+'qg1-rules.yaml').then(r=>r.text()),
+      fetch(base+'qg2-rules.yaml').then(r=>r.text()),
+    ]);
+    const q1=jsyaml.load(r1), q2=jsyaml.load(r2);
+    S.rules.qg1=q1.rules||[];
+    S.rules.qg2=[
+      ...(q2.pr_body_rules||[]),
+      ...(q2.artifact_rules||[]),
+      ...(q2.bc_diff_rules||[]),
+      ...(q2.cac_quality_rules||[]),
+      ...(q2.data_model_rules||[]),
+    ];
+    document.getElementById('rules-status').textContent=`${S.rules.qg1.length} QG1 + ${S.rules.qg2.length} QG2/BC/CAC rules loaded.`;
+    document.getElementById('rules-status').className='th ok';
+    log(`Rules loaded: ${S.rules.qg1.length} QG1, ${S.rules.qg2.length} QG2/BC/CAC`,'lok');
+  } catch(e){
+    // Fallback to embedded rules if YAML fetch fails (e.g. running locally)
+    S.rules.qg1=FALLBACK_QG1;
+    S.rules.qg2=FALLBACK_QG2;
+    document.getElementById('rules-status').textContent=`Using embedded rules (YAML fetch failed: ${e.message.slice(0,60)})`;
+    document.getElementById('rules-status').className='th';
+    log(`YAML fetch failed — using embedded fallback rules`,'linf');
+  }
+}
+async function reloadRules(){document.getElementById('rules-status').textContent='Reloading…';await loadRules();renderRulesTab();}
+
+function renderRulesTab(){
+  function ruleItem(r){
+    const badges=[
+      r.status==='Active'?'<span class="rbadge rb-act">Active</span>':'<span class="rbadge rb-rec">Rec.</span>',
+      r.enabled===false?'<span class="rbadge rb-off">off</span>':'',
+      r.ai_check&&r.enabled!==false?'<span class="rbadge rb-ai">AI</span>':'',
+      r.placeholder?'<span class="rbadge rb-off">placeholder</span>':'',
+    ].filter(Boolean).join('');
+    return `<div class="rule-item"><span class="ri-id">${r.id}</span><span class="ri-title" title="${r.title}">${r.title}</span><div class="ri-badges">${badges}</div></div>`;
+  }
+  document.getElementById('rl-qg1').innerHTML=S.rules.qg1.map(ruleItem).join('');
+  document.getElementById('rl-qg2').innerHTML=S.rules.qg2.map(ruleItem).join('');
+}
+
+// ── GitHub API ────────────────────────────────────────────────────────────────
+async function gh(path){
+  const tok=getTok();if(!tok) throw new Error('No token.');
+  const r=await fetch(`https://api.github.com${path}`,{headers:{'Authorization':`Bearer ${tok}`,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}});
+  if(r.status===401) throw new Error('Token invalid or expired.');
+  if(!r.ok) throw new Error(`GitHub API ${r.status}: ${path}`);
+  return r.json();
+}
+async function ghAll(path){const out=[];let p=1;while(true){const sep=path.includes('?')?'&':'?';const d=await gh(`${path}${sep}per_page=100&page=${p}`);if(!Array.isArray(d)||d.length===0)break;out.push(...d);if(d.length<100)break;p++;}return out;}
+async function testConn(){const dot=document.getElementById('conn-dot'),lbl=document.getElementById('conn-lbl');dot.className='dot';lbl.textContent='checking…';try{const r=await gh(`/repos/${OW}/${RE}`);dot.className='dot ok';lbl.textContent=`connected · ${r.open_issues_count} open`;if(document.getElementById('tok').value.trim())saveTok(document.getElementById('tok').value.trim());}catch(e){dot.className='dot err';lbl.textContent=e.message;}}
+
+// ── AI API ────────────────────────────────────────────────────────────────────
+async function callAI(prompt, context){
+  const key=getAIKey(), provider=getAIProvider(), model=getAIModel();
+  if(!key) return null;
+  const messages=[{role:'user',content:`${prompt}\n\nContent to analyse:\n\`\`\`\n${context.slice(0,3000)}\n\`\`\``}];
+  const systemPrompt='You are a TC4S (Technical Committee for Standardisation) reviewer for Catena-X standards. Be precise, objective, and concise. Always respond with valid JSON in the exact format requested. Do not add explanations outside the JSON structure.';
+
+  let url, headers, body;
+  if(provider==='claude'){
+    url='https://api.anthropic.com/v1/messages';
+    headers={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
+    body=JSON.stringify({model,max_tokens:400,system:systemPrompt,messages});
+  } else {
+    url=(provider==='custom'?getAIUrl():'https://api.openai.com/v1')+'/chat/completions';
+    headers={'Content-Type':'application/json','Authorization':`Bearer ${key}`};
+    body=JSON.stringify({model,max_tokens:400,temperature:0.1,messages:[{role:'system',content:systemPrompt},...messages]});
+  }
+
+  try{
+    const r=await fetch(url,{method:'POST',headers,body});
+    if(!r.ok) return null;
+    const d=await r.json();
+    const text=provider==='claude'?d.content?.[0]?.text:d.choices?.[0]?.message?.content;
+    if(!text) return null;
+    const clean=text.replace(/```json|```/g,'').trim();
+    return JSON.parse(clean);
+  } catch{return null;}
+}
+
+async function testAI(){
+  const btn=event.target;btn.textContent='Testing…';btn.disabled=true;
+  try{
+    const r=await callAI('Respond as JSON: {"result":"pass","confidence":1.0,"finding":"AI connection successful"}','test');
+    if(r?.finding){btn.textContent='✓ AI connected';btn.style.color='var(--green)';}
+    else{btn.textContent='✗ No response';btn.style.color='var(--red)';}
+  }catch(e){btn.textContent='✗ Error';btn.style.color='var(--red)';}
+  setTimeout(()=>{btn.textContent='Test AI connection';btn.style.color='';btn.disabled=false;},3000);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const has=(t,...terms)=>terms.some(x=>(t||'').toLowerCase().includes(x.toLowerCase()));
+const wc=t=>(t||'').split(/\s+/).filter(Boolean).length;
+function sec(b,h){const m=(b||'').match(new RegExp(`#+\\s*${h}[^\\n]*\\n([\\s\\S]*?)(?=\\n#+|$)`,'i'));return m?m[1].trim():null;}
+function cxIds(t){return[...new Set((t.match(/CX-0\d{3}/gi)||[]))];}
+function semP(s){const m=s.match(/(\d+)\.(\d+)\.(\d+)\s*(?:→|->|to)\s*(\d+)\.(\d+)\.(\d+)/i);if(!m)return null;const[,ma,mi,pa,mb,mib,pb]=m.map(Number);return mb>ma?'major':mib>mi?'minor':pb>pa?'patch':null;}
+function classify(issue){const t=`${issue.title} ${issue.body||''}`.toLowerCase();const lb=(issue.labels||[]).map(l=>l.name.toLowerCase());if(lb.some(l=>l.includes('sr')||l.includes('standard-request')))return 'SR';if(has(t,'standard request','[sr]','new standard'))return 'SR';const vm=t.match(/(\d+)\.(\d+)\.(\d+)\s*(?:→|->|to)\s*(\d+)\.(\d+)\.(\d+)/);if(vm&&semP(vm[0])==='patch')return 'Patch';return 'CR';}
+
+// ── Rule-based checks ─────────────────────────────────────────────────────────
+const P=(id,title,note,rat,src,loc)=>({id,title,result:'PASS',note:note||'',rationale:rat||'',source:src||'',loc:loc||'',blocking:false,aiResult:null});
+const F=(id,title,note,rat,src,loc,blocking=true)=>({id,title,result:'FAIL',note:note||'',rationale:rat||'',source:src||'',loc:loc||'',blocking,aiResult:null});
+const W=(id,title,note,rat,src,loc)=>({id,title,result:'ADVISORY',note:note||'',rationale:rat||'',source:src||'',loc:loc||'',blocking:false,aiResult:null});
+const SK=(id,title,note)=>({id,title,result:'SKIP',note:note||'',rationale:'',source:'',loc:'',blocking:false,aiResult:null});
+
+function runQG1Checks(issue){
+  const B=issue.body||'',FT=`${issue.title} ${B}`.toLowerCase();
+  const LB=(issue.labels||[]).map(l=>l.name.toLowerCase()),T=classify(issue),R=[];
+  const enabled=r=>S.rules.qg1.find(x=>x.id===r)?.enabled!==false;
+
+  if(enabled('QG1-01')){const ms=sec(B,'Management Summary');
+    if(!ms)R.push(F('QG1-01','Management Summary present and filled','No "Management Summary" heading found.','Key basis for TC4S assessment.','CW37-2025 · Active','Issue body → Management Summary'));
+    else if(wc(ms)<30)R.push(F('QG1-01','Management Summary present and filled',`Only ${wc(ms)} words — too short.`,'','CW37-2025','Issue body → Management Summary'));
+    else if(has(ms,'tbd','todo','placeholder'))R.push(F('QG1-01','Management Summary present and filled','Contains placeholder text.','','CW37-2025','Issue body → Management Summary'));
+    else R.push(P('QG1-01','Management Summary present and filled',`Present (${wc(ms)} words).`,'','CW37-2025','Issue body'));}
+
+  if(enabled('QG1-02')){const dm=LB.some(l=>l.includes('domain-manager')||l.includes('dm-approved'));const bl=(B.match(/^[-*]\s+\S/gm)||[]).length;
+    if(!dm)R.push(F('QG1-02','Domain Manager label; >=3 companies','Label not set — hard blocker.','','CW48-2025','GitHub labels'));
+    else if(bl<3)R.push(W('QG1-02','Domain Manager label; >=3 companies',`Label set but only ${bl} bullet(s) found.`,'','CW48-2025','Issue body'));
+    else R.push(P('QG1-02','Domain Manager label; >=3 companies','Label set, companies listed.','','CW48-2025','Issue body'));}
+
+  if(enabled('QG1-03')){const hm=has(FT,'sam','semantic model','aspect model','sldt');const hc=has(FT,'changelog','changelog.md');
+    if(!hm&&!hc)R.push(F('QG1-03','Mandatory artifacts referenced','No model and no changelog reference.','','TC4S Workshop Sep 2025','Issue body'));
+    else if(!hm)R.push(F('QG1-03','Mandatory artifacts referenced','No SAM/SLDT/aspect model reference.','','TC4S Workshop Sep 2025','Issue body'));
+    else if(!hc)R.push(W('QG1-03','Mandatory artifacts referenced','No changelog reference.','','TC4S Workshop Sep 2025','Issue body'));
+    else R.push(P('QG1-03','Mandatory artifacts referenced','Model and changelog referenced.','','TC4S Workshop Sep 2025','Issue body'));}
+
+  if(T==='SR'&&enabled('QG1-04')){const w=wc(B),hs=has(FT,'objective','scope','boundary','purpose','goal');
+    if(w<200)R.push(W('QG1-04','SR: solid description',`${w} words — add objectives and scope.`,'','CW10-2026','Issue body'));
+    else if(!hs)R.push(W('QG1-04','SR: solid description','No scope/objective statement.','','CW10-2026','Issue body'));
+    else R.push(P('QG1-04','SR: solid description',`${w} words, scope present.`,'','CW10-2026','Issue body'));}
+  else if(T!=='SR')R.push(SK('QG1-04','SR: solid description','Not applicable — '+T+'.'));
+
+  if(T==='SR'&&enabled('QG1-05'))
+    R.push(has(FT,'overlap','existing standard','already covered','differentiation')
+      ?P('QG1-05','Scope overlap verified','Overlap check documented.','','CW45-2025','Issue body')
+      :W('QG1-05','Scope overlap verified','No overlap check documented.','','CW45-2025','Issue body'));
+  else if(T!=='SR')R.push(SK('QG1-05','Scope overlap verified','Not applicable — '+T+'.'));
+
+  if(T==='SR'&&enabled('QG1-06'))
+    R.push(has(FT,'interoperability','exchange','multi-party','cross-company')
+      ?P('QG1-06','No feature-level standardization','Interoperability context found.','','CW23-2025','Issue body')
+      :W('QG1-06','No feature-level standardization','No interoperability context.','','CW23-2025','Issue body'));
+  else if(T!=='SR')R.push(SK('QG1-06','No feature-level standardization','Not applicable — '+T+'.'));
+
+  if(T==='SR'&&enabled('QG1-07')&&has(FT,'consolidat','replac','merg','deprecat')){
+    const dl=has(FT,'deprecation')&&(B.match(/#\d+/)||[]).length>0;
+    R.push(dl?P('QG1-07','Deprecation Requests linked','Links found.','','CW45-2025','Issue body'):W('QG1-07','Deprecation Requests linked','Consolidation detected but no deprecation links.','','CW45-2025','Issue body'));}
+  else R.push(SK('QG1-07','Deprecation Requests','No consolidation or not SR.'));
+
+  if((T==='CR'||T==='Patch')&&enabled('QG1-08')){
+    const vm=has(FT,'major','minor','patch')||/\d+\.\d+\.\d+/.test(FT);
+    if(!vm)R.push(W('QG1-08','Change type justified','No version type stated.','','CW9-2026','Issue body'));
+    else R.push(has(FT,'because','reason','justif','breaking','compatible')
+      ?P('QG1-08','Change type justified','Version type with rationale.','','CW9-2026','Issue body')
+      :W('QG1-08','Change type justified','Version stated but no rationale.','','CW9-2026','Issue body'));}
+  else R.push(SK('QG1-08','Change type justified','SR — not applicable.'));
+
+  if(enabled('QG1-09')){const ids=cxIds(FT);
+    if(ids.length>1)R.push(has(FT,'dependencies','affected standards','cascading')
+      ?P('QG1-09','Cross-dependencies documented',`Found: ${ids.join(', ')}.`,'','CW47-2025','Issue body')
+      :W('QG1-09','Cross-dependencies documented',`${ids.length} CX IDs found but no dependency section.`,'','CW47-2025','Issue body'));
+    else R.push(P('QG1-09','Cross-dependencies documented','No multi-standard deps detected.','','CW47-2025','Issue body'));}
+
+  return{type:T,results:R};
+}
+
+function runQG2Checks(pr,files,diffs){
+  const B=pr.body||'',R=[];
+  const en=id=>S.rules.qg2.find(x=>x.id===id)?.enabled!==false;
+
+  // PR body
+  if(en('QG2-01')){const unc=(B.match(/\[ \]/g)||[]).length;
+    if(unc>0)R.push(F('QG2-01','PR checklist completed',`${unc} unchecked checkbox(es).`,'','CW3-2026','PR body'));
+    else if(!has(B,'- [x]','- [X]'))R.push(W('QG2-01','PR checklist completed','No checkboxes — template missing?','','CW3-2026','PR body'));
+    else R.push(P('QG2-01','PR checklist completed','All checkboxes checked.','','CW3-2026','PR body'));}
+
+  if(en('QG2-02')){const ms=sec(B,'Management Summary');
+    if(!ms)R.push(F('QG2-02','Management Summary (1.1-1.5)','Section missing.','','CW2-2026','PR body'));
+    else{const miss=[];
+      if(!has(ms,'1.1','standard id','version','domain'))miss.push('1.1');
+      if(!has(ms,'1.2','rationale','why'))miss.push('1.2');
+      if(!has(ms,'1.3','changed'))miss.push('1.3');
+      if(!has(ms,'1.4','consequence'))miss.push('1.4');
+      if(!has(ms,'1.5','compat','backward'))miss.push('1.5');
+      if(miss.length>0)R.push(W('QG2-02','Management Summary (1.1-1.5)',`Missing: ${miss.join(', ')}.`,'','CW2-2026','PR body → '+miss[0]));
+      else R.push(P('QG2-02','Management Summary (1.1-1.5)','All sections present.','','CW2-2026','PR body'));}}
+
+  R.push(/(fixes|closes|resolves|refs?)\s+#\d+/i.test(B)||/#\d{3,}/.test(B)
+    ?P('QG2-12','Planning Issue linked','Link found.','','CW2-2026','PR body')
+    :W('QG2-12','Planning Issue linked','No issue reference found.','','CW2-2026','PR body'));
+  R.push(pr.milestone?.title?P('QG2-13','Milestone set',`"${pr.milestone.title}"`)
+    :F('QG2-13','Milestone set','No milestone — breaks automation.','','CW2-2026','PR metadata'));
+
+  // Artifacts
+  const cl=files.find(f=>/changelog\.md$/i.test(f));
+  R.push(cl?P('QG2-03','Changelog.md updated',cl,'','CW22-2025','Changed files')
+    :F('QG2-03','Changelog.md updated','No CHANGELOG.md in changed files.','','CW22-2025','Changed files'));
+  const vm=B.match(/(\d+\.\d+\.\d+)\s*(?:→|->|to)\s*(\d+\.\d+\.\d+)/);
+  R.push(vm?P('QG2-04','Semantic versioning applied',`${vm[0]} (${semP(vm[0])?.toUpperCase()||'?'})`)
+    :W('QG2-04','Semantic versioning applied','No version pattern in PR body.'));
+  const hmr=has(B,'sldt-semantic-models','eclipse-tractusx/sldt','aspect model');
+  if(files.some(f=>/\.(ttl|samm)$/.test(f))&&!hmr)R.push(F('QG2-05','Aspect model links released','Model files changed but no SLDT link.'));
+  else R.push(P('QG2-05','Aspect model links released',hmr?'SLDT link found.':'No model files changed.'));
+  const io=files.filter(f=>/\.(png|jpg|jpeg|gif|webp)$/i.test(f)&&!/assets/i.test(f));
+  R.push(io.length>0?F('QG2-19','Images in ./assets/',`Outside assets: ${io.map(f=>f.split('/').pop()).join(', ')}.`):P('QG2-19','Images in ./assets/','OK.'));
+  const bn=files.filter(f=>/assets\//i.test(f)&&/[A-Z_\s]/.test(f.split('/').pop()));
+  R.push(bn.length>0?W('QG2-22','Asset kebab-case',`Non-kebab: ${bn.map(f=>f.split('/').pop()).join(', ')}.`):P('QG2-22','Asset kebab-case','OK.'));
+
+  // BC diff
+  let anyHigh=false;
+  const mds=diffs.filter(f=>f.filename.endsWith('.md'));
+  const models=diffs.filter(f=>/\.(ttl|samm|yaml|yml|json)$/.test(f.filename));
+  const mc=mds.filter(f=>f.patch.split('\n').some(l=>(l.startsWith('+')||l.startsWith('-'))&&/\bMUST\b|\bSHALL\b/.test(l)));
+  if(mc.length>0){anyHigh=true;R.push(F('BC-PR-01','MUST changed in diff',`In: ${mc.map(f=>f.filename.split('/').pop()).join(', ')}.`,'BC concept required.','BC-PR-01 · HIGH',`Diff → ${mc.map(f=>f.filename.split('/').pop()).join(', ')}`,false));}
+  else R.push(P('BC-PR-01','MUST changed in diff','No MUST/SHALL changes detected.'));
+  const mr=models.filter(f=>f.patch.split('\n').some(l=>l.startsWith('-')&&/property|field|samm:|sh:property/i.test(l)));
+  if(mr.length>0){anyHigh=true;R.push(F('BC-PR-02','Data model field removed',`In: ${mr.map(f=>f.filename.split('/').pop()).join(', ')}.`,'BC concept required.','BC-PR-02 · HIGH','',false));}
+  else R.push(P('BC-PR-02','Data model field removed','No field removals detected.'));
+  const ac=diffs.filter(f=>/assets\/.*\.(yaml|json)$/i.test(f.filename)).filter(f=>f.patch.split('\n').some(l=>(l.startsWith('+')||l.startsWith('-'))&&/paths:|operationId:/i.test(l)));
+  if(ac.length>0){anyHigh=true;R.push(F('BC-PR-03','API endpoint changed',`In: ${ac.map(f=>f.filename.split('/').pop()).join(', ')}.`,'','BC-PR-03 · HIGH','',false));}
+  else R.push(P('BC-PR-03','API endpoint changed','No API path changes.'));
+  const cc=models.filter(f=>f.patch.split('\n').some(l=>(l.startsWith('+')||l.startsWith('-'))&&/required|optional|minCount|maxCount/i.test(l)));
+  if(cc.length>0){anyHigh=true;R.push(F('BC-PR-04','Field cardinality changed',`In: ${cc.map(f=>f.filename.split('/').pop()).join(', ')}.`,'','BC-PR-04 · HIGH','',false));}
+  else R.push(P('BC-PR-04','Field cardinality changed','No cardinality changes.'));
+  const vp=vm?semP(vm[0]):null;
+  if(anyHigh&&vp&&vp!=='major')R.push(F('BC-PR-05','Breaking change in MAJOR release',`${vp.toUpperCase()} detected — hard blocker.`,'','BC-PR-05 · CRITICAL','',true));
+  else R.push(P('BC-PR-05','Breaking change in MAJOR release',anyHigh?'MAJOR confirmed.':'No HIGH BC changes.'));
+
+  // CAC
+  const patch=diffs.filter(f=>f.filename.endsWith('.md')).map(f=>f.patch).join('\n');
+  const hasCAC=has(patch,'conformity assessment','## cac','conformity assessment criteria');
+  R.push(hasCAC?P('CAC-01','CAC section present','Found.','Mandatory from R25.12.','QG2-09','Changed .md files')
+    :F('CAC-01','CAC section present','No CAC section in changed .md files.','Mandatory from R25.12.','QG2-09','Changed .md files'));
+  const cats=['api','semantic','protocol','logic'].filter(c=>patch.toLowerCase().includes(c));
+  R.push(cats.length>=2?P('CAC-02','CAC categorised',cats.join(', ')+'.')
+    :W('CAC-02','CAC categorised',`Only ${cats.length} categorie(s) found.`));
+  const vague=['should','where necessary','as appropriate','reasonably'].filter(t=>patch.toLowerCase().includes(t));
+  R.push(vague.length>0?W('CAC-03','No vague language in CAC',`Vague terms: ${vague.map(t=>`"${t}"`).join(', ')}.`):P('CAC-03','No vague language in CAC','OK.'));
+  const mustCnt=(patch.match(/\bMUST\b|\bSHALL\b/g)||[]).length;
+  R.push(mustCnt>0?P('CAC-04','CAC backed by MUST statements',`${mustCnt} MUST(s) found.`):W('CAC-04','CAC backed by MUST statements','No MUST statements found.'));
+
+  // Data model placeholder
+  R.push(SK('DM-01','[PLACEHOLDER] Aspect model structural diff','Requires access to eclipse-tractusx/sldt-semantic-models.'));
+  R.push(SK('DM-02','[PLACEHOLDER] Aspect model RELEASED state','Requires API access to SLDT repository.'));
+
+  return R;
+}
+
+// ── AI enhancement ────────────────────────────────────────────────────────────
+async function enhanceWithAI(results, context, gate){
+  if(!aiEnabled()) return results;
+  const allRules=[...S.rules.qg1,...S.rules.qg2];
+  for(const r of results){
+    const ruleDef=allRules.find(x=>x.id===r.id);
+    if(!ruleDef?.ai_check||!ruleDef?.ai_prompt) continue;
+    const groupMap={'QG1-':'qg1','QG2-':'pr','BC-':'bc','CAC-':'cac'};
+    const group=Object.entries(groupMap).find(([k])=>r.id.startsWith(k))?.[1]||'qg1';
+    if(!aiGroupOn(group)) continue;
+    log(`AI analysing ${r.id}…`,'lai');
+    const aiRes=await callAI(ruleDef.ai_prompt, context);
+    if(aiRes){
+      r.aiResult=aiRes;
+      // If AI is more critical than rule-based, escalate
+      if(aiRes.result==='fail'&&r.result==='PASS') r.result='AI-ADVISORY';
+      if(aiRes.result==='fail'&&r.result==='ADVISORY') r.result='AI-FAIL';
+    }
+  }
+  return results;
+}
+
+// ── Milestone lookup ──────────────────────────────────────────────────────────
+async function findMS(input){
+  if(!input) return null;
+  const list=await ghAll(`/repos/${OW}/${RE}/milestones?state=all`);
+  const m=list.find(x=>x.title===input)||list.find(x=>x.title.toLowerCase().includes(input.toLowerCase()));
+  if(!m) throw new Error(`Milestone "${input}" not found.\n\nAvailable:\n${list.map(x=>`  • ${x.title}`).join('\n')}`);
+  return m;
+}
+
+// ── Run ───────────────────────────────────────────────────────────────────────
+function log(msg,cls=''){const lb=document.getElementById('lb');if(!lb)return;const d=document.createElement('div');if(cls)d.className=cls;d.textContent=msg;lb.appendChild(d);lb.scrollTop=lb.scrollHeight;}
+
+async function run(){
+  if(!getTok()){alert('Please enter your GitHub token first.');return;}
+  const mp=document.getElementById('mp');
+  mp.innerHTML=`<div class="logbox" id="lb"></div><div class="empty"><div class="spin"></div><div style="font-family:var(--mono);font-size:11px">Fetching…</div></div>`;
+  const aI=[],aP=[];
+  try{
+    if(aiEnabled()) log('AI semantic analysis: enabled','lai');
+    const msInput=document.getElementById('ms').value.trim();
+    let ms=null,msLabel='all open';
+    if(msInput){log(`Looking up "${msInput}"…`,'linf');ms=await findMS(msInput);msLabel=ms.title;log(`Found: ${ms.title}`,'lok');}
+    const msQ=ms?`&milestone=${ms.number}`:'';
+    const sI=S.items.filter(i=>i.type==='issue'&&i.num).map(i=>parseInt(i.num));
+    const sP=S.items.filter(i=>i.type==='pr'&&i.num).map(i=>parseInt(i.num));
+    let issues=[],prs=[];
+    if(sI.length>0){log(`Fetching ${sI.length} specific issue(s)…`,'linf');for(const n of sI)issues.push(await gh(`/repos/${OW}/${RE}/issues/${n}`));}
+    else if(S.gates.qg1){log('Fetching open issues…','linf');const raw=await ghAll(`/repos/${OW}/${RE}/issues?state=open${msQ}`);issues=raw.filter(i=>!i.pull_request);log(`${issues.length} issue(s).`,'lok');}
+    if(sP.length>0){log(`Fetching ${sP.length} specific PR(s)…`,'linf');for(const n of sP)prs.push(await gh(`/repos/${OW}/${RE}/pulls/${n}`));}
+    else if(S.gates.qg2){log('Fetching open PRs…','linf');prs=await ghAll(`/repos/${OW}/${RE}/pulls?state=open${msQ}`);log(`${prs.length} PR(s).`,'lok');}
+
+    for(const issue of issues){
+      log(`Checking Issue #${issue.number}…`);
+      const q=S.checks.qg1rules?runQG1Checks(issue):{type:classify(issue),results:[]};
+      if(aiEnabled()&&aiGroupOn('qg1'))
+        q.results=await enhanceWithAI(q.results,`${issue.title}\n\n${issue.body||''}`,'QG1');
+      aI.push({item:issue,type:q.type,qg1:q.results});
+    }
+    for(const pr of prs){
+      log(`Checking PR #${pr.number}…`);
+      const raw=await ghAll(`/repos/${OW}/${RE}/pulls/${pr.number}/files`);
+      const files=raw.map(f=>f.filename),diffs=raw.map(f=>({filename:f.filename,patch:f.patch||'',status:f.status}));
+      let qg2=runQG2Checks(pr,files,diffs);
+      if(aiEnabled()){
+        const prContext=`Title: ${pr.title}\n\n${pr.body||''}\n\nChanged files: ${files.join(', ')}`;
+        qg2=await enhanceWithAI(qg2,prContext,'QG2');
+      }
+      aP.push({item:pr,qg2,files});
+    }
+    renderResults(aI,aP,msLabel);
+  }catch(e){mp.innerHTML=`<div class="empty" style="color:var(--red)"><div style="font-size:20px">✕</div><div style="max-width:400px;text-align:center;white-space:pre-wrap;font-family:var(--mono);font-size:11px">${e.message}</div></div>`;}
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function rpill(r){
+  if(r.result==='PASS')    return '<span class="rpill pp">pass</span>';
+  if(r.result==='FAIL')    return r.blocking?'<span class="rpill bp">blocking</span>':'<span class="rpill fp">fail</span>';
+  if(r.result==='ADVISORY')return '<span class="rpill wp">advisory</span>';
+  if(r.result==='SKIP')    return '<span class="rpill sp">n/a</span>';
+  if(r.result==='AI-ADVISORY')return '<span class="rpill aip">AI advisory</span>';
+  if(r.result==='AI-FAIL') return '<span class="rpill fhp">AI fail</span>';
+  if(r.result==='FLAG')    return r.risk==='HIGH'?'<span class="rpill fhp">🔴 HIGH</span>':r.risk==='MEDIUM'?'<span class="rpill fmp">🟡 MED</span>':'<span class="rpill fep">🟢 exc.</span>';
+  return '';
+}
+function rrow(r){
+  const hasAI=r.aiResult&&aiEnabled();
+  const aiBlock=hasAI?`<div class="ai-finding">${r.aiResult.finding||''}</div><div class="ai-conf">AI confidence: ${Math.round((r.aiResult.confidence||0)*100)}%</div>`:'';
+  const f=[r.note?`<div class="fm">${r.note}</div>`:'',r.source?`<div class="fsrc">${r.source}</div>`:'',r.loc?`<div class="floc">${r.loc}</div>`:'',aiBlock].filter(Boolean).join('');
+  return `<tr><td class="cid"><span class="rid">${r.id||''}</span></td><td class="crule"><span style="font-size:12px;color:var(--text)">${r.title||''}</span></td><td class="cres">${rpill(r)}</td><td class="cfind">${f||'—'}</td></tr>`;
+}
+function secBlock(label,results,isAI=false){
+  if(!results||!results.length) return '';
+  const aiBadge=isAI&&aiEnabled()?`<span class="ai-badge-s">AI</span>`:'';
+  return `<div class="slbl">${label} <span style="color:var(--muted);font-size:9px">(${results.length})</span>${aiBadge}</div>
+  <table class="rt"><thead><tr><th class="cid">Rule</th><th class="crule">Check</th><th class="cres">Result</th><th class="cfind">Finding · source · location</th></tr></thead>
+  <tbody>${results.map(rrow).join('')}</tbody></table>`;
+}
+function sumBadge(results){
+  const bl=results.filter(r=>r.result==='FAIL'&&r.blocking).length;
+  const fa=results.filter(r=>r.result==='FAIL'&&!r.blocking).length;
+  const wa=results.filter(r=>r.result==='ADVISORY').length;
+  const ai=results.filter(r=>r.result?.startsWith('AI')).length;
+  if(bl>0) return `<span class="badge bfail">⊘ ${bl} blocking</span>`;
+  if(fa+wa>0) return `<span class="badge bwarn">△ ${fa+wa} advisory</span>`;
+  if(ai>0) return `<span class="badge bai">AI ${ai}</span>`;
+  return `<span class="badge bpass">✓ pass</span>`;
+}
+
+function renderResults(issueR,prR,msLabel){
+  const allR=[...issueR.flatMap(r=>r.qg1),...prR.flatMap(r=>r.qg2)];
+  const blocking=allR.filter(r=>r.result==='FAIL'&&r.blocking).length;
+  const fails=allR.filter(r=>r.result==='FAIL').length;
+  const warns=allR.filter(r=>r.result==='ADVISORY').length;
+  const aiFlags=allR.filter(r=>r.result?.startsWith('AI')).length;
+  const passes=allR.filter(r=>r.result==='PASS').length;
+
+  let html=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+    <div style="font-size:11px;font-family:var(--mono);color:var(--muted)">Milestone: <span style="color:var(--text)">${msLabel}</span></div>
+    <button class="expbtn" style="margin-left:auto" onclick="exportMD()">↓ export .md</button>
+  </div>
+  <div class="sbar">
+    <div class="si"><div class="sl">Issues</div><div class="sv">${issueR.length}</div></div>
+    <div class="si"><div class="sl">PRs</div><div class="sv">${prR.length}</div></div>
+    <div class="sdiv"></div>
+    <div class="si"><div class="sl">Blocking</div><div class="sv ${blocking>0?'r':'g'}">${blocking}</div></div>
+    <div class="si"><div class="sl">Failures</div><div class="sv ${fails>0?'r':'g'}">${fails}</div></div>
+    <div class="si"><div class="sl">Advisory</div><div class="sv ${warns>0?'y':'g'}">${warns}</div></div>
+    ${aiEnabled()?`<div class="si"><div class="sl">AI flags</div><div class="sv ${aiFlags>0?'p':'g'}">${aiFlags}</div></div>`:''}
+    <div class="si"><div class="sl">Passed</div><div class="sv g">${passes}</div></div>
+  </div>`;
+
+  const groups=[
+    {key:'SR',label:'Standard Requests',pcls:'gsr',items:issueR.filter(r=>r.type==='SR'),kind:'issue'},
+    {key:'CR',label:'Change Requests',pcls:'gcr',items:issueR.filter(r=>r.type==='CR'),kind:'issue'},
+    {key:'Patch',label:'Patch Requests',pcls:'gpatch',items:issueR.filter(r=>r.type==='Patch'),kind:'issue'},
+    {key:'PR',label:'Pull Requests',pcls:'gpr',items:prR,kind:'pr'},
+  ];
+  for(const g of groups){
+    if(!g.items.length) continue;
+    html+=`<div class="ghdr"><span class="gpill ${g.pcls}">${g.key}</span>${g.label} <span style="color:var(--muted);font-size:10px">${g.items.length} item(s)</span></div>`;
+    for(const r of g.items){
+      const num=r.item.number,title=r.item.title;
+      const ghUrl=`https://github.com/${OW}/${RE}/${g.kind==='pr'?'pull':'issues'}/${num}`;
+      const uid=`${g.kind}-${num}`;
+      const allI=g.kind==='issue'?r.qg1:r.qg2;
+      const badge=sumBadge(allI);
+      const aiRan=allI.some(x=>x.aiResult);
+      const gateBadge=g.kind==='issue'?'<span class="badge bgate">QG1</span>':'<span class="badge" style="background:#0f2a1a;color:#4ade80;border:1px solid #1a4a2a">QG2</span>';
+      const aiBadgeH=aiRan?'<span class="badge bai">AI</span>':'';
+      html+=`<div class="card">
+        <div class="ch" onclick="tog2('${uid}')">
+          <span class="inum">#${num}</span><span class="ititle">${title}</span>
+          <div class="ibadges">${gateBadge}<span class="badge btype">${r.type||'PR'}</span>${badge}${aiBadgeH}<a href="${ghUrl}" target="_blank" class="ghl">↗ GH</a></div>
+          <span class="chev" id="chev-${uid}">›</span>
+        </div>
+        <div class="cb" id="cb-${uid}">`;
+      if(g.kind==='issue'){
+        html+=secBlock('QG1 – Issue completeness',r.qg1,true);
+      } else {
+        const qg2r=r.qg2.filter(x=>['QG2-01','QG2-02','QG2-12','QG2-13'].includes(x.id));
+        const artr=r.qg2.filter(x=>['QG2-03','QG2-04','QG2-05','QG2-06','QG2-08','QG2-09','QG2-10','QG2-15','QG2-19','QG2-21','QG2-22'].includes(x.id));
+        const bcr=r.qg2.filter(x=>x.id.startsWith('BC-'));
+        const cacr=r.qg2.filter(x=>x.id.startsWith('CAC-'));
+        const dmr=r.qg2.filter(x=>x.id.startsWith('DM-'));
+        html+=secBlock('QG2 Part 1 – PR body',qg2r,true);
+        html+=secBlock(`QG2 Part 2 – Artifacts (${r.files.length} files)`,artr,true);
+        html+=secBlock('QG2 Part 3 – Backward compatibility (diff)',bcr,true);
+        html+=secBlock('QG2 Part 4 – CAC',cacr,true);
+        if(dmr.length)html+=secBlock('Data model checks (placeholder)',dmr,false);
+      }
+      html+=`</div></div>`;
+    }
+  }
+  if(!issueR.length&&!prR.length)html+=`<div class="empty"><div style="font-size:24px;opacity:.3">∅</div><div>No items found.</div></div>`;
+  document.getElementById('mp').innerHTML=html;
+  window._LR={issueR,prR};
+}
+function tog2(uid){const cb=document.getElementById('cb-'+uid),ch=document.getElementById('chev-'+uid);const op=cb.classList.toggle('op');ch.classList.toggle('op',op);}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+function exportMD(){
+  const d=window._LR;if(!d)return;
+  const ic=r=>({PASS:'✅',FAIL:r.blocking?'🚫':'❌',ADVISORY:'⚠️',SKIP:'–','AI-ADVISORY':'🤖⚠️','AI-FAIL':'🤖❌',FLAG:r.risk==='HIGH'?'🔴':'🟡'})[r.result]||'–';
+  const tbl=rows=>`| | Rule | Result | Finding | AI Finding |\n|---|---|---|---|---|\n`+rows.map(r=>`| ${ic(r)} | \`${r.id}\` ${r.title} | ${r.result} | ${r.note||'—'} | ${r.aiResult?.finding||'—'} |`).join('\n');
+  let md=`# TC4S Review Report\n\n**Date:** ${new Date().toISOString().split('T')[0]}  \n**Repo:** ${OW}/${RE}  \n**AI:** ${aiEnabled()?'enabled ('+getAIProvider()+')':'disabled'}\n\n---\n\n`;
+  for(const g of [{k:'SR',l:'Standard Requests'},{k:'CR',l:'Change Requests'},{k:'Patch',l:'Patch Requests'}]){
+    const items=d.issueR.filter(r=>r.type===g.k);if(!items.length)continue;
+    md+=`## ${g.l}\n\n`;
+    for(const r of items){md+=`### Issue #${r.item.number}: ${r.item.title}\n\n[→ GitHub](https://github.com/${OW}/${RE}/issues/${r.item.number})\n\n${tbl(r.qg1)}\n\n---\n\n`;}
+  }
+  if(d.prR.length){md+=`## Pull Requests\n\n`;for(const r of d.prR){md+=`### PR #${r.item.number}: ${r.item.title}\n\n[→ GitHub](https://github.com/${OW}/${RE}/pull/${r.item.number})\n\n${tbl(r.qg2)}\n\n---\n\n`;}}
+  const a=document.createElement('a');a.href='data:text/markdown;charset=utf-8,'+encodeURIComponent(md);a.download=`tc4s-report-${new Date().toISOString().split('T')[0]}.md`;a.click();
+}
+
+// ── Fallback rules (used if YAML fetch fails) ─────────────────────────────────
+const FALLBACK_QG1=[
+  {id:'QG1-01',title:'Management Summary present and filled',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse the Management Summary. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'QG1-02',title:'Domain Manager label; >=3 companies',status:'Active',enabled:true,ai_check:false},
+  {id:'QG1-03',title:'Mandatory artifacts referenced',status:'Active',enabled:true,ai_check:false},
+  {id:'QG1-04',title:'SR: solid description',status:'Recommendation',enabled:true,ai_check:true,ai_prompt:'Analyse SR description quality. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'QG1-05',title:'Scope overlap verified',status:'Recommendation',enabled:true,ai_check:true,ai_prompt:'Check overlap documentation. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'QG1-06',title:'No feature-level standardization',status:'Recommendation',enabled:true,ai_check:true,ai_prompt:'Check for feature-level scope. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'QG1-07',title:'Deprecation Requests linked',status:'Recommendation',enabled:true,ai_check:false},
+  {id:'QG1-08',title:'Change type justified',status:'Recommendation',enabled:true,ai_check:true,ai_prompt:'Analyse version type justification. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'QG1-09',title:'Cross-dependencies documented',status:'Recommendation',enabled:true,ai_check:true,ai_prompt:'Analyse cross-standard dependencies. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+];
+const FALLBACK_QG2=[
+  {id:'QG2-01',title:'PR checklist completed',status:'Active',enabled:true,ai_check:false},
+  {id:'QG2-02',title:'Management Summary (1.1-1.5)',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse PR Management Summary sections 1.1-1.5. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'QG2-08',title:'BC confirmed in Section 1.5',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse BC statement in Section 1.5. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'BC-PR-01',title:'MUST changed in diff',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse MUST statement changes in diff for breaking potential. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'CAC-01',title:'CAC section present',status:'Active',enabled:true,ai_check:false},
+  {id:'CAC-02',title:'CAC categorised',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse CAC categorisation quality. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'CAC-03',title:'No vague language in CAC',status:'Active',enabled:true,ai_check:true,ai_prompt:'Check CAC criteria for vague language. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'DM-01',title:'[PLACEHOLDER] Aspect model diff',status:'Active',enabled:false,ai_check:false,placeholder:true},
+];
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',async()=>{
+  const t=loadTok();if(t){document.getElementById('tok').value=t;const h=Math.max(0,Math.round(((+localStorage.getItem(TE)||0)-Date.now())/36e5));document.getElementById('th-tok').textContent=`Token cached ~${h}h`;document.getElementById('th-tok').className='th ok';}
+  const ak=sessionStorage.getItem('tc4s_aikey');if(ak)document.getElementById('ai-key').value=ak;
+  renderItems();
+  await loadRules();
+});
+</script>
+</body>
+</html>

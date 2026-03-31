@@ -1,0 +1,444 @@
+# TC4S Review Rules – Quality Gate 2 (Pull Requests)
+# Source: TC4S-Profile_Governance___Review-Rules_Consol_v0_1.xlsx
+# Version: 2026-03-30
+
+meta:
+  gate: QG2
+  artifact: GitHub Pull Request + file diffs
+  version: "2026-03-30"
+
+# ── PR BODY COMPLETENESS ─────────────────────────────────────────────────────
+
+pr_body_rules:
+
+  - id: QG2-01
+    title: PR checklist fully completed
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: Every checkbox in the PR template must be [x] or N/A. Empty boxes are grounds for rejection.
+    fail_if:
+      - Any unchecked [ ] checkbox in PR body
+      - No checkboxes found at all (template missing)
+    source: "CW3-2026 · Active"
+
+  - id: QG2-02
+    title: Management Summary (Sections 1.1-1.5) in full prose
+    status: Active
+    criticality: Low
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse the Management Summary of this Pull Request (Sections 1.1-1.5).
+      Assess each section: (1.1) Standard ID/version/domain present?
+      (1.2) Rationale clearly explained? (1.3) What changed — specific and concrete?
+      (1.4) Consequences if not changed — stated? (1.5) Compatibility statement present?
+      Is it written in full prose sentences (not bullet lists)?
+      Be specific — quote where sections are thin or missing.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: PR body must contain Management Summary in full prose covering all five subsections.
+    fail_if:
+      - Management Summary section missing
+      - Any of sections 1.1-1.5 missing or empty
+      - Uses bullet lists instead of prose
+    source: "CW2-2026 · Active"
+
+  - id: QG2-12
+    title: Planning Issue linked under Development
+    status: Active
+    criticality: Low
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: At least one GitHub Issue must be linked via the Development section.
+    fail_if:
+      - No issue reference found (Closes/Fixes/Resolves #NNN)
+    source: "CW2-2026 · Active"
+
+  - id: QG2-13
+    title: Milestone correctly set on PR
+    status: Active
+    criticality: Low
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: PR must have the correct release milestone set.
+    fail_if:
+      - No milestone set on PR
+    source: "CW2-2026 · Active"
+
+# ── ARTIFACT COMPLETENESS ────────────────────────────────────────────────────
+
+artifact_rules:
+
+  - id: QG2-03
+    title: Changelog.md updated with versioned entry
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: CHANGELOG.md must be in changed files with a [X.Y.Z] entry listing Added/Changed/Removed.
+    fail_if:
+      - No CHANGELOG.md in changed files
+      - No versioned [X.Y.Z] entry found
+      - Only "minor updates" or vague descriptions
+    source: "CW22-2025 · Active"
+
+  - id: QG2-04
+    title: Semantic versioning correctly applied
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: Version must follow MAJOR.MINOR.PATCH. Major=breaking, Minor=compatible addition, Patch=fix.
+    fail_if:
+      - No version change pattern found in PR body
+      - Version increment does not match change type
+    source: "CW5-2026 · Active"
+
+  - id: QG2-05
+    title: Aspect model links present, functional, and in status released
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: All aspect models must be linked, published in eclipse-tractusx/sldt-semantic-models, in state released.
+    fail_if:
+      - Model files changed but no SLDT link
+      - Link found but released status not confirmed
+    source: "CW4-2026 · Active"
+
+  - id: QG2-06
+    title: OpenAPI file in /assets folder where APIs defined
+    status: Active
+    criticality: High
+    applies_to: [if_api]
+    enabled: true
+    ai_check: false
+    check: For every API in the standard, an OpenAPI file must be in ./assets/.
+    fail_if:
+      - API content detected but no openapi.yaml in ./assets/
+    source: "CW22-2025 · Active"
+
+  - id: QG2-08
+    title: Backward compatibility explicitly confirmed in Section 1.5
+    status: Active
+    criticality: Very high
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse the backward compatibility statement in Section 1.5 of this PR.
+      Assess: (1) Is a BC statement present? (2) Is it substantive — does it explain
+      HOW compatibility is maintained or WHY it is not applicable?
+      (3) Is "Not applicable – new standard" used appropriately or as an excuse?
+      (4) Has the committee/expert group explicitly confirmed the BC assessment?
+      Be specific — quote the relevant phrase.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: PR Section 1.5 must contain an explicit BC statement confirmed by Committee/EG.
+    fail_if:
+      - No BC statement in Section 1.5
+      - No committee confirmation
+    source: "PR template Section 1.5 · Active"
+
+  - id: QG2-09
+    title: CAC section present and objectively verifiable
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse the Conformity Assessment Criteria (CAC) section of this standard.
+      Assess: (1) Is a CAC section present? (2) Are criteria categorised (API/Semantics/Protocol/Logic)?
+      (3) Is each criterion objectively testable with a clear input/output/pass-fail?
+      (4) Is there vague language (should, appropriate, reasonably)?
+      (5) Is each CAC backed by at least one MUST statement in the standard?
+      Be specific — quote examples of good and problematic criteria.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: Standard must include CAC section. Criteria must be categorised, testable, backed by MUST statements.
+    fail_if:
+      - No CAC section found (mandatory from R25.12)
+      - Criteria not categorised
+      - Vague language in criteria
+      - CAC items not backed by MUST statements
+    source: "PR template Section 4.1, CW7-2026 · Active from R25.12"
+
+  - id: QG2-10
+    title: MUST/MAY unambiguous; >=1 MUST present
+    status: Recommendation
+    criticality: Very high
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse the normative language usage in this standard.
+      Assess: (1) Are MUST/SHALL/SHOULD/MAY used correctly per RFC 2119?
+      (2) Is there at least one verifiable MUST requirement?
+      (3) Are there "hidden MUSTs" — SHOULD statements where the author clearly
+      intends mandatory behaviour? (4) Are any MUST statements addressed to
+      the CAB or Expert Group rather than to the system implementer?
+      Be specific — quote examples of correct and incorrect usage.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: Standard must not consist solely of MAY statements. At least one verifiable MUST required.
+    fail_if:
+      - No MUST statements in changed standard files
+      - MUST addressed to CAB or EG, not system implementer
+    source: "CW50-2025 · Recommendation"
+
+  - id: QG2-15
+    title: Standard internally consistent and open
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse this standard for internal consistency.
+      Assess: (1) Are there contradictory statements (same term defined differently
+      in different sections)? (2) Are there proprietary technology lock-ins or product
+      name references in normative text? (3) Are key terms used consistently
+      throughout? Flag specific contradictions or inconsistencies with section references.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: No contradictory statements. No proprietary lock-in. Consistent terminology.
+    fail_if:
+      - Same concept defined differently in different sections
+      - Proprietary product recommended normatively
+    source: "TC4S Profile 2024/2025 · Active"
+
+  - id: QG2-19
+    title: Images in ./assets/ folder; SVG or >=300 dpi
+    status: Active
+    criticality: Low
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: All images must be in ./assets/. SVG preferred; rasters >=300 dpi. No inline Base64.
+    fail_if:
+      - Image files outside ./assets/
+      - Inline Base64 images in Markdown
+    source: "PR template Section 4.2 · Active"
+
+  - id: QG2-21
+    title: No HTML within Markdown files
+    status: Active
+    criticality: Middle
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: Standard documents must use plain Markdown only. No HTML tags.
+    fail_if:
+      - HTML tags found in .md files
+    source: "PR template Section 4.2 · Active"
+
+  - id: QG2-22
+    title: Asset files use kebab-case naming
+    status: Active
+    criticality: Middle
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: All asset files must use lowercase-hyphenated naming.
+    fail_if:
+      - Asset file names contain uppercase or underscores
+    source: "PR template Section 4.2 · Active"
+
+# ── BACKWARD COMPATIBILITY (DIFF-LEVEL) ─────────────────────────────────────
+
+bc_diff_rules:
+
+  - id: BC-PR-01
+    title: MUST-statement changed in diff
+    status: Active
+    criticality: Very high
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse the MUST/SHALL statement changes in this diff.
+      For each changed MUST statement found, assess:
+      (1) What was the original requirement? (2) What is the new requirement?
+      (3) Is this a breaking change — could existing certified implementations fail?
+      (4) Is the change justified by the stated version type?
+      Be specific — quote the before/after text of each changed MUST.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: MUST/SHALL changes in diff are breaking by default. BC concept required.
+    consequence: BC concept required; MAJOR release only
+    source: "BackwardComp sheet · BC-PR-01 · HIGH"
+
+  - id: BC-PR-02
+    title: Data model field removed or renamed in diff
+    status: Active
+    criticality: Very high
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse the data model changes in this diff.
+      For each field removal, rename, or type change found, assess:
+      (1) What field changed and how? (2) Is this breaking for existing
+      producers/consumers? (3) Is the change justified?
+      Be specific — quote the affected field names and file paths.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: Field removals/renames in model files are breaking changes. BC concept required.
+    consequence: BC concept required; MAJOR release only
+    source: "BackwardComp sheet · BC-PR-02 · HIGH"
+
+  - id: BC-PR-03
+    title: API endpoint or operationId changed in diff
+    status: Active
+    criticality: Very high
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: API path or operationId changes in OpenAPI files are breaking.
+    consequence: BC concept required; MAJOR release only
+    source: "BackwardComp sheet · BC-PR-03 · HIGH"
+
+  - id: BC-PR-04
+    title: Field cardinality changed (required <-> optional)
+    status: Active
+    criticality: Very high
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: Cardinality changes in model files are breaking changes.
+    consequence: BC concept required; MAJOR release only
+    source: "BackwardComp sheet · BC-PR-04 · HIGH"
+
+  - id: BC-PR-05
+    title: Breaking change in correct release type (MAJOR required)
+    status: Active
+    criticality: Very high
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: If any HIGH BC indicator triggered and version is MINOR/PATCH, that is a hard blocker.
+    consequence: Hard blocker — version type must be MAJOR
+    source: "BackwardComp sheet · BC-PR-05 · Procedurally critical"
+
+# ── CAC QUALITY (from Quality Criteria Catalogue v0.1) ───────────────────────
+# Placeholder section — full standard analysis feature (future)
+
+cac_quality_rules:
+
+  - id: CAC-01
+    title: CAC section present in standard
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: Conformity Assessment section must be present. Mandatory from R25.12.
+    fail_if:
+      - No CAC section in changed Markdown files
+    source: "QG2-09 · Active from R25.12"
+
+  - id: CAC-02
+    title: CAC criteria categorised (API/Semantics/Protocol/Logic)
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse the CAC section categorisation.
+      Assess whether criteria are organised into the four mandatory categories:
+      API, Semantics, Protocol, Logic/Processing.
+      For each category present, note whether the criteria are truly testable.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: CAC criteria must be categorised into API, Semantics, Protocol, Logic.
+    fail_if:
+      - Fewer than 2 categories present
+    source: "CW50-2025 · Active"
+
+  - id: CAC-03
+    title: No vague language in CAC criteria
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse the CAC criteria for vague or non-testable language.
+      Flag any criteria containing: should, where necessary, as appropriate,
+      reasonably, if applicable, or any other language that does not produce
+      a binary pass/fail test result. For each flagged criterion, suggest
+      a more precise, testable reformulation.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: CAC criteria must be objectively testable. No vague terms.
+    fail_if:
+      - Vague terms (should, appropriate, reasonably) in CAC section
+    source: "CW7-2026 (TUV-Sud feedback) · Active"
+
+  - id: CAC-04
+    title: Each CAC item backed by >=1 MUST statement
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse whether each CAC criterion can be traced back to at least
+      one MUST statement in the standard body.
+      For each CAC item, identify the backing MUST statement (or flag if missing).
+      Note: a CAC without a backing MUST is unenforceable.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: Every CAC criterion must correspond to a normative MUST in the standard.
+    fail_if:
+      - No MUST statements in standard
+      - CAC items without identifiable backing MUST
+    source: "Quality Criteria Catalogue v0.1 · Active"
+
+  - id: CAC-05
+    title: No placeholder text in CAC section
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: CAC section must be complete. No TBD/TODO/placeholder.
+    fail_if:
+      - TBD/TODO/placeholder in CAC section
+    source: "General completeness rule"
+
+# ── DATA MODEL CHECK (PLACEHOLDER) ──────────────────────────────────────────
+# Full implementation requires access to eclipse-tractusx/sldt-semantic-models
+
+data_model_rules:
+
+  - id: DM-01
+    title: "[PLACEHOLDER] Aspect model structural changes verified"
+    status: Active
+    criticality: Very high
+    applies_to: [all]
+    enabled: false
+    ai_check: false
+    placeholder: true
+    placeholder_note: >
+      Requires read access to eclipse-tractusx/sldt-semantic-models.
+      When enabled: compare changed .ttl/.samm files against previous version,
+      detect field removals, renames, type changes, cardinality changes.
+    check: Aspect model diff must be verified for structural breaking changes.
+    source: "Planned feature — sldt-semantic-models access required"
+
+  - id: DM-02
+    title: "[PLACEHOLDER] Aspect model in released state in SLDT"
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: false
+    ai_check: false
+    placeholder: true
+    placeholder_note: >
+      Requires API access to eclipse-tractusx/sldt-semantic-models.
+      When enabled: verify each referenced model URL returns HTTP 200
+      and model status is 'RELEASED' (not DRAFT or DEPRECATED).
+    check: All referenced aspect models must be in RELEASED state.
+    source: "Planned feature — sldt-semantic-models access required"

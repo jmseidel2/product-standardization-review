@@ -1,0 +1,171 @@
+# TC4S Review Rules – Quality Gate 1 (Issues)
+# Source: TC4S-Profile_Governance___Review-Rules_Consol_v0_1.xlsx
+# Version: 2026-03-30
+#
+# Fields:
+#   enabled:    true/false — toggle rule on/off without deleting
+#   ai_check:   true = semantic AI analysis available for this rule
+#   ai_prompt:  Prompt fragment sent to the AI for semantic analysis
+
+meta:
+  gate: QG1
+  artifact: GitHub Issue
+  version: "2026-03-30"
+
+rules:
+
+  - id: QG1-01
+    title: Management Summary present and substantively filled
+    status: Active
+    criticality: High
+    applies_to: [SR, CR]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse the Management Summary of this GitHub Issue.
+      Assess: (1) Is it substantive or merely a placeholder?
+      (2) Does it clearly explain WHY this change is needed?
+      (3) Does it identify a real coordination problem between independent parties?
+      Be specific — quote the relevant phrase if passing, or name what is missing if failing.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: Issue body must contain a Management Summary section with substantive prose (>=30 words, no TBD/TODO).
+    fail_if:
+      - Management Summary section absent
+      - Section body < 30 words
+      - Contains TBD / TODO / placeholder
+    source: "CW37-2025 · Active"
+
+  - id: QG1-02
+    title: Domain Manager approval label; >=3 supporting companies
+    status: Active
+    criticality: Very high
+    applies_to: [SR, CR]
+    enabled: true
+    ai_check: false
+    check: Issue must carry domain-manager-approved label. Body must list >=3 distinct member companies.
+    fail_if:
+      - domain-manager-approved label not set
+      - Fewer than 3 company names identifiable
+    source: "CW48-2025 · Active"
+
+  - id: QG1-03
+    title: All mandatory artifacts referenced (model + changelog)
+    status: Active
+    criticality: Very high
+    applies_to: [SR, CR]
+    enabled: true
+    ai_check: false
+    check: Issue must reference an aspect model (SAM/SLDT) and a changelog.
+    fail_if:
+      - No SAM / SLDT / aspect model reference
+      - No changelog reference
+    source: "TC4S Workshop Sep 2025 · Active"
+
+  - id: QG1-04
+    title: SR contains solid description with objectives and scope
+    status: Recommendation
+    criticality: High
+    applies_to: [SR]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse this Standard Request description.
+      Assess: (1) Are objectives clearly stated? (2) Is scope defined with in-scope and out-of-scope?
+      (3) Are boundaries identifiable? (4) Is this a mature proposal or just a concept note?
+      Be specific — quote the relevant phrase if passing, or name what is missing if failing.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: Body must clearly identify objectives, scope, and boundaries. Min ~200 words for SR.
+    fail_if:
+      - Body < 200 words
+      - No scope or objective statement found
+    source: "CW10-2026 · Recommendation"
+
+  - id: QG1-05
+    title: Scope overlap with existing standards verified
+    status: Recommendation
+    criticality: Very high
+    applies_to: [SR]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse whether this Issue documents a check for scope overlap with existing Catena-X standards.
+      Assess: (1) Is an overlap check explicitly documented? (2) Are existing CX standard IDs referenced
+      with differentiation? (3) Does the described scope appear to overlap with known CX standards?
+      Be specific — quote the relevant phrase if passing, or name what is missing if failing.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: Overlap check with existing CX standards must be documented.
+    fail_if:
+      - No overlap check documented
+    source: "CW45-2025 · Recommendation"
+
+  - id: QG1-06
+    title: No feature-level standardization
+    status: Recommendation
+    criticality: High
+    applies_to: [SR]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse whether this Standard Request targets cross-company interoperability or single-vendor feature codification.
+      Assess: (1) Does it require two independent parties to coordinate?
+      (2) Or does it primarily codify internal implementation detail or a single company preference?
+      (3) Could this be solved by bilateral agreement rather than a standard?
+      Be specific — quote the relevant phrase.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: SR must target cross-company interoperability, not single-vendor features.
+    fail_if:
+      - No interoperability context found
+      - Only one company use case described
+    source: "CW23-2025 · Recommendation"
+
+  - id: QG1-07
+    title: Deprecation Requests linked for replaced standards
+    status: Recommendation
+    criticality: Very high
+    applies_to: [SR]
+    enabled: true
+    ai_check: false
+    check: Consolidation or replacement must link Deprecation Request Issues for each replaced standard.
+    fail_if:
+      - Consolidation described but no Deprecation Request linked
+    source: "CW45-2025 · Recommendation"
+
+  - id: QG1-08
+    title: Change type (Major/Minor/Patch) clearly justified
+    status: Recommendation
+    criticality: Very high
+    applies_to: [CR, Patch]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse the version change type justification in this Change Request.
+      Assess: (1) Is the change type (Major/Minor/Patch) stated and justified?
+      (2) Does the described change match the stated version type per SemVer?
+      (3) Are there signals this could be a breaking change disguised as Minor/Patch
+      (e.g. MUST statement changes, data model field removals, API changes)?
+      Be specific — quote the relevant phrase.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: CR must state version change type with clear rationale.
+    fail_if:
+      - No version change type stated
+      - No rationale for version type
+    source: "CW9-2026 · Recommendation"
+
+  - id: QG1-09
+    title: Cross-dependencies with other standards identified
+    status: Recommendation
+    criticality: Very high
+    applies_to: [SR, CR]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse the cross-standard dependency documentation in this Issue.
+      Assess: (1) Are affected CX standards listed? (2) Is a cascading impact
+      assessment present for each? (3) Are there implicit dependencies not mentioned
+      (shared data models, CX-IDs, shared protocols)? List any CX standard IDs found.
+      Be specific — quote the relevant phrase if passing, or name what is missing.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: If SR/CR affects other CX standards, all dependencies must be listed with impact assessment.
+    fail_if:
+      - Multiple CX IDs referenced but no dependency section
+    source: "CW47-2025 · Recommendation"
