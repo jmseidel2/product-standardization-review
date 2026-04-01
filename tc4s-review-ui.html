@@ -10,111 +10,150 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{
-  --bg:#0d0f12;--bg2:#141720;--bg3:#1c2030;
-  --border:#2a2f3d;--border2:#3a4055;
-  --text:#e8eaf0;--muted:#6b7280;
-  --accent:#4f9cf9;--accent2:#2563eb;
-  --green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--purple:#a78bfa;
+  /* Catena-X palette */
+  --cx-grey:#B5B5B5;
+  --cx-gold:#FFA600;
+  --cx-lime:#B8CA4D;
+  --cx-signal:#EC692F;
+
+  /* Backgrounds — dark enough to keep the UI readable */
+  --bg:#111210;--bg2:#1a1c18;--bg3:#222520;
+  --border:#2e3128;--border2:#3d4235;
+
+  /* Text */
+  --text:#e6e8e0;--muted:#7a7f6e;
+
+  /* Semantic role mappings to CX palette */
+  --accent:var(--cx-gold);       /* primary interactive */
+  --accent2:#c27d00;             /* darker gold for buttons */
+  --green:var(--cx-lime);        /* pass / ok */
+  --red:var(--cx-signal);        /* fail / blocking (signal only) */
+  --yellow:var(--cx-gold);       /* advisory */
+  --purple:#a0a896;              /* AI — neutral grey-green */
+
   --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{font-size:14px}
 body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;
   display:grid;grid-template-columns:300px 1fr;grid-template-rows:48px 1fr}
+
+/* ── Header ── */
 header{grid-column:1/-1;background:var(--bg2);border-bottom:1px solid var(--border);
   display:flex;align-items:center;padding:0 20px;gap:12px}
-.logo{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--accent);letter-spacing:.08em}
+.logo{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--cx-gold);letter-spacing:.1em}
 .logo span{color:var(--muted)}
 .hst{margin-left:auto;font-size:11px;font-family:var(--mono);color:var(--muted);display:flex;align-items:center;gap:6px}
 .dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
-.dot.ok{background:var(--green)}.dot.err{background:var(--red)}.dot.ai{background:var(--purple)}
+.dot.ok{background:var(--cx-lime)}.dot.err{background:var(--cx-signal)}.dot.ai{background:var(--cx-gold)}
+
+/* ── Sidebar ── */
 aside{background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
 .tabs-nav{display:flex;border-bottom:1px solid var(--border)}
 .tnav{flex:1;padding:10px 0;font-size:11px;font-family:var(--mono);text-align:center;
   cursor:pointer;color:var(--muted);border:none;background:transparent;
   border-bottom:2px solid transparent;transition:all .15s}
-.tnav.on{color:var(--text);border-bottom-color:var(--accent)}
+.tnav.on{color:var(--text);border-bottom-color:var(--cx-gold)}
 .tpanel{display:none;padding:14px;flex-direction:column;gap:16px;flex:1}
 .tpanel.on{display:flex}
-.sb h4{font-size:10px;font-family:var(--mono);letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+.sb h4{font-size:10px;font-family:var(--mono);letter-spacing:.1em;color:var(--cx-grey);
+  text-transform:uppercase;margin-bottom:8px}
 label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;font-family:var(--mono)}
 input[type=text],input[type=password],select{width:100%;background:var(--bg3);
   border:1px solid var(--border);border-radius:6px;color:var(--text);
   font-family:var(--mono);font-size:12px;padding:6px 9px;margin-bottom:8px;
   outline:none;transition:border-color .15s}
-input:focus,select:focus{border-color:var(--accent)}
+input:focus,select:focus{border-color:var(--cx-gold)}
 select option{background:var(--bg3)}
 .tr{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
 .tog{font-size:11px;font-family:var(--mono);padding:3px 9px;border-radius:20px;
   border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .12s}
-.tog.on{background:var(--accent2);border-color:var(--accent);color:#fff}
+.tog.on{background:var(--accent2);border-color:var(--cx-gold);color:#fff}
 .rbtn{width:100%;padding:9px;background:var(--accent2);border:none;border-radius:8px;
   color:#fff;font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .15s}
-.rbtn:hover:not(:disabled){background:var(--accent)}
+.rbtn:hover:not(:disabled){background:var(--cx-gold);color:#111}
 .rbtn.sec{background:var(--bg3);border:1px solid var(--border2);color:var(--text);margin-bottom:5px}
+.rbtn.sec:hover:not(:disabled){border-color:var(--cx-gold);color:var(--cx-gold);background:var(--bg3)}
 .rbtn:disabled{opacity:.45;cursor:not-allowed}
 .th{font-size:10px;color:var(--muted);line-height:1.5;margin-top:-5px;margin-bottom:7px}
-.th.ok{color:var(--green)}
+.th.ok{color:var(--cx-lime)}
+
+/* ── Settings panel (token) ── */
+.settings-panel{background:var(--bg3);border-top:1px solid var(--border);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.settings-panel h4{font-size:10px;font-family:var(--mono);letter-spacing:.1em;color:var(--cx-grey);text-transform:uppercase;margin-bottom:4px}
+.conn-row{display:flex;align-items:center;gap:7px}
+.conn-row input{flex:1;margin-bottom:0}
+.conn-row button{white-space:nowrap;width:auto;padding:6px 11px;font-size:11px;flex-shrink:0}
+
+/* ── AI toggles ── */
 .ai-row{display:flex;align-items:center;gap:8px;padding:8px 10px;
   background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:8px}
 .ai-label{font-size:11px;font-family:var(--mono);color:var(--muted);flex:1}
-.ai-label.on{color:var(--purple)}
+.ai-label.on{color:var(--cx-gold)}
 .sw{position:relative;width:30px;height:16px;flex-shrink:0}
 .sw input{opacity:0;width:0;height:0}
 .sw-track{position:absolute;inset:0;background:var(--border2);border-radius:8px;cursor:pointer;transition:background .2s}
-.sw input:checked~.sw-track{background:#7f39fb}
+.sw input:checked~.sw-track{background:var(--accent2)}
 .sw-thumb{position:absolute;top:2px;left:2px;width:12px;height:12px;background:#fff;border-radius:50%;
   transition:transform .2s;pointer-events:none}
 .sw input:checked~.sw-track .sw-thumb{transform:translateX(14px)}
+
+/* ── Rules tab ── */
 .rule-item{background:var(--bg3);border:1px solid var(--border);border-radius:7px;
   padding:8px 10px;margin-bottom:5px;display:flex;align-items:center;gap:8px}
 .ri-id{font-size:10px;font-family:var(--mono);color:var(--muted);min-width:64px}
 .ri-title{font-size:11px;flex:1;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ri-badges{display:flex;gap:4px;flex-shrink:0}
 .rbadge{font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:3px;font-weight:500}
-.rb-act{background:#0f2a1a;color:#4ade80}.rb-rec{background:#2a1e0a;color:#fbbf24}
-.rb-off{background:var(--bg);color:var(--muted)}.rb-ai{background:#1e1040;color:#a78bfa}
+.rb-act{background:#192310;color:var(--cx-lime)}.rb-rec{background:#2a1e00;color:var(--cx-gold)}
+.rb-off{background:var(--bg);color:var(--muted)}.rb-ai{background:#251e10;color:var(--cx-gold)}
+
+/* ── Main content ── */
 main{overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:12px}
 .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:10px;color:var(--muted);font-family:var(--mono);font-size:12px}
-.spin{width:24px;height:24px;border:2px solid var(--border2);border-top-color:var(--accent);
+.spin{width:24px;height:24px;border:2px solid var(--border2);border-top-color:var(--cx-gold);
   border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+
+/* ── Stats bar ── */
 .sbar{background:var(--bg2);border:1px solid var(--border);border-radius:10px;
   padding:11px 16px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
 .si{display:flex;flex-direction:column;gap:2px}
 .sl{font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
 .sv{font-size:20px;font-weight:300;font-family:var(--mono)}
-.sv.r{color:var(--red)}.sv.g{color:var(--green)}.sv.y{color:var(--yellow)}.sv.p{color:var(--purple)}
+.sv.r{color:var(--cx-signal)}.sv.g{color:var(--cx-lime)}.sv.y{color:var(--cx-gold)}.sv.p{color:var(--cx-grey)}
 .sdiv{width:1px;height:32px;background:var(--border)}
+
+/* ── Group / card headers ── */
 .ghdr{font-size:10px;font-family:var(--mono);font-weight:500;letter-spacing:.08em;
   text-transform:uppercase;color:var(--muted);padding:7px 0 5px;
   border-bottom:1px solid var(--border);margin-bottom:7px;display:flex;align-items:center;gap:7px}
 .gpill{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500}
-.gsr{background:#1a2540;color:#7db4f7;border:1px solid #2a3a60}
-.gcr{background:#1f1a30;color:#c4b5fd;border:1px solid #3a2a60}
-.gpatch{background:#1a2a1a;color:#86efac;border:1px solid #2a4a2a}
-.gpr{background:#0f2a1a;color:#4ade80;border:1px solid #1a4a2a}
-.gqg1{background:#1a2540;color:#7db4f7;border:1px solid #2a3a60;font-size:11px;padding:3px 10px}
-.gqg2{background:#0f2a1a;color:#4ade80;border:1px solid #1a4a2a;font-size:11px;padding:3px 10px}
+.gsr{background:#1a2010;color:#c8d87a;border:1px solid #2e3a1a}
+.gcr{background:#241800;color:var(--cx-gold);border:1px solid #3a2800}
+.gpatch{background:#192310;color:var(--cx-lime);border:1px solid #2a3a18}
+.gpr{background:#1e1a10;color:var(--cx-grey);border:1px solid #3a3520}
+.gqg1{background:#241800;color:var(--cx-gold);border:1px solid #3a2800;font-size:11px;padding:3px 10px}
+.gqg2{background:#192310;color:var(--cx-lime);border:1px solid #2a3a18;font-size:11px;padding:3px 10px}
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:5px}
 .ch{padding:9px 13px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border);
   cursor:pointer;user-select:none;background:var(--bg3)}
-.ch:hover{background:#1e2438}
-.inum{font-family:var(--mono);font-size:11px;color:var(--accent);background:#1a2540;
-  padding:2px 6px;border-radius:4px;border:1px solid #2a3a60;white-space:nowrap}
+.ch:hover{background:#282c22}
+.inum{font-family:var(--mono);font-size:11px;color:var(--cx-gold);background:#241800;
+  padding:2px 6px;border-radius:4px;border:1px solid #3a2800;white-space:nowrap}
 .ititle{font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ibadges{display:flex;gap:4px;flex-shrink:0;align-items:center}
 .badge{font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:4px;font-weight:500;white-space:nowrap}
-.bgate{background:#1a2540;color:#7db4f7;border:1px solid #2a3a60}
-.btype{background:#1e2535;color:var(--muted);border:1px solid var(--border)}
-.bpass{background:#0f2a1a;color:var(--green);border:1px solid #1a4a2a}
-.bfail{background:#2a0f0f;color:var(--red);border:1px solid #4a1a1a}
-.bwarn{background:#2a1f0a;color:var(--yellow);border:1px solid #4a3a1a}
-.bai{background:#1e1040;color:#a78bfa;border:1px solid #3a2060}
-.ghl{font-size:10px;color:var(--accent);font-family:var(--mono);text-decoration:none;
-  padding:2px 5px;border:1px solid #2a3a60;border-radius:4px;background:#1a2540}
-.ghl:hover{background:#243060}
+.bgate{background:#241800;color:var(--cx-gold);border:1px solid #3a2800}
+.btype{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.bpass{background:#192310;color:var(--cx-lime);border:1px solid #2a3a18}
+.bfail{background:#2a1000;color:var(--cx-signal);border:1px solid #4a1e00}
+.bwarn{background:#241800;color:var(--cx-gold);border:1px solid #3a2800}
+.bai{background:#252015;color:var(--cx-grey);border:1px solid #3a3528}
+.ghl{font-size:10px;color:var(--cx-gold);font-family:var(--mono);text-decoration:none;
+  padding:2px 5px;border:1px solid #3a2800;border-radius:4px;background:#241800}
+.ghl:hover{background:#3a2800}
 .chev{color:var(--muted);font-size:11px;transition:transform .15s;flex-shrink:0}
 .chev.op{transform:rotate(90deg)}
 .cb{display:none}.cb.op{display:block}
@@ -122,58 +161,68 @@ main{overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:12
   color:var(--muted);padding:6px 13px 4px;background:var(--bg);border-bottom:1px solid var(--border);
   display:flex;align-items:center;gap:6px}
 .ai-badge-s{font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:3px;
-  background:#1e1040;color:#a78bfa}
+  background:#252015;color:var(--cx-grey)}
+
+/* ── Results table ── */
 table.rt{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
 table.rt th{font-size:10px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;
   letter-spacing:.05em;padding:5px 10px;text-align:left;border-bottom:1px solid var(--border);
   background:var(--bg);font-weight:400}
 table.rt td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:top}
 table.rt tr:last-child td{border-bottom:none}
-table.rt tr:hover td{background:#151a24}
+table.rt tr:hover td{background:#1e2018}
 .cid{width:80px}.crule{width:155px}.cres{width:82px}.cfind{}
 .rid{font-family:var(--mono);font-size:10px;color:var(--muted)}
 .rpill{font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:7px;
   font-weight:500;white-space:nowrap;display:inline-block}
-.pp{background:#0f2a1a;color:#4ade80}.fp{background:#2a0f0f;color:#f87171}
-.bp{background:#3a0a0a;color:#ff6b6b}.wp{background:#2a1e0a;color:#fbbf24}
-.sp{background:var(--bg3);color:var(--muted)}.fhp{background:#2a0f0f;color:#f87171}
-.fmp{background:#2a1e0a;color:#fbbf24}.fep{background:#0f2a1a;color:#4ade80}
-.aip{background:#1e1040;color:#c4b5fd}
+.pp{background:#192310;color:var(--cx-lime)}
+.fp{background:#2a1000;color:var(--cx-signal)}
+.bp{background:#3a0e00;color:#ff7043}
+.wp{background:#241800;color:var(--cx-gold)}
+.sp{background:var(--bg3);color:var(--muted)}
+.fhp{background:#2a1000;color:var(--cx-signal)}
+.fmp{background:#241800;color:var(--cx-gold)}
+.fep{background:#192310;color:var(--cx-lime)}
+.aip{background:#252015;color:var(--cx-grey)}
 .fm{font-size:12px;color:var(--text);margin-bottom:2px;line-height:1.5}
-.fsrc{font-size:10px;font-family:var(--mono);color:#4a5568;padding:1px 0}
-.floc{font-size:10px;font-family:var(--mono);color:var(--accent);background:#1a2540;
+.fsrc{font-size:10px;font-family:var(--mono);color:#5a5e50;padding:1px 0}
+.floc{font-size:10px;font-family:var(--mono);color:var(--cx-gold);background:#241800;
   padding:2px 5px;border-radius:3px;display:inline-block;margin-top:2px}
-.ai-finding{font-size:11px;color:#c4b5fd;background:#1e1040;border:1px solid #3a2060;
+.ai-finding{font-size:11px;color:var(--cx-grey);background:#1e1e18;border:1px solid var(--border2);
   border-radius:5px;padding:5px 8px;margin-top:4px;line-height:1.5}
-.ai-conf{font-size:10px;font-family:var(--mono);color:#7a5fbc;margin-top:2px}
+.ai-conf{font-size:10px;font-family:var(--mono);color:var(--muted);margin-top:2px}
 .logbox{background:var(--bg);border:1px solid var(--border);border-radius:6px;
   padding:8px 11px;font-family:var(--mono);font-size:11px;color:var(--muted);
   max-height:80px;overflow-y:auto;line-height:1.6}
-.lok{color:var(--green)}.lerr{color:var(--red)}.linf{color:var(--accent)}.lai{color:var(--purple)}
+.lok{color:var(--cx-lime)}.lerr{color:var(--cx-signal)}.linf{color:var(--cx-gold)}.lai{color:var(--cx-grey)}
 .expbtn{font-size:11px;font-family:var(--mono);padding:5px 11px;border-radius:6px;
   border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
-.expbtn:hover{border-color:var(--accent);color:var(--accent)}
-/* Selection panel */
+.expbtn:hover{border-color:var(--cx-gold);color:var(--cx-gold)}
+
+/* ── Selection panel ── */
 .sel-group{border-bottom:1px solid var(--border)}
 .sel-group:last-child{border-bottom:none}
 .sel-group-hdr{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;
   letter-spacing:.06em;padding:8px 13px;background:var(--bg);display:flex;align-items:center;gap:8px}
 .sel-item{display:flex;align-items:center;gap:7px;padding:5px 13px;transition:background .1s}
 .sel-item:hover{background:var(--bg3)}
-.sel-item input[type=checkbox]{width:13px;height:13px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
-.sel-item-num{font-family:var(--mono);font-size:11px;color:var(--accent);min-width:42px}
+.sel-item input[type=checkbox]{width:13px;height:13px;accent-color:var(--cx-gold);cursor:pointer;flex-shrink:0}
+.sel-item-num{font-family:var(--mono);font-size:11px;color:var(--cx-gold);min-width:42px}
 .sel-item-title{font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
-/* Suggestions */
-.sugg-box{margin-top:5px;padding:5px 9px;background:#0a1628;border-left:2px solid var(--accent);
-  border-radius:0 4px 4px 0;font-size:11px;color:#7db4f7;line-height:1.5}
-/* Export checkbox */
+
+/* ── Suggestions ── */
+.sugg-box{margin-top:5px;padding:5px 9px;background:#1e1a08;border-left:2px solid var(--cx-gold);
+  border-radius:0 4px 4px 0;font-size:11px;color:#c8a84a;line-height:1.5}
+
+/* ── Export checkbox ── */
 .export-chk{display:flex;align-items:center;gap:3px;cursor:pointer;padding:1px 5px;
   border-radius:3px;border:1px solid var(--border);background:var(--bg);margin-left:4px}
-.export-chk input{accent-color:var(--accent);cursor:pointer;width:11px;height:11px}
+.export-chk input{accent-color:var(--cx-gold);cursor:pointer;width:11px;height:11px}
 .export-chk span{font-size:9px;font-family:var(--mono);color:var(--muted)}
-/* QG gate section headers in results */
+
+/* ── QG gate headers ── */
 .gate-hdr{padding:10px 0 6px;display:flex;align-items:center;gap:8px;
-  border-bottom:2px solid var(--border2);margin-bottom:10px;margin-top:4px}
+  border-bottom:2px solid var(--cx-gold);margin-bottom:10px;margin-top:4px}
 .gate-hdr-lbl{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--text)}
 </style>
 </head>
@@ -181,12 +230,13 @@ table.rt tr:hover td{background:#151a24}
 
 <header>
   <div class="logo">TC4S<span>/</span>REVIEW</div>
-  <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">catenax-eV / product-standardization-prod</div>
+  <div style="font-size:11px;color:var(--muted);font-family:var(--mono)" id="hdr-repo">catenax-eV / product-standardization-prod</div>
   <div class="hst">
     <div class="dot" id="ai-dot" title="AI status"></div>
     <span id="ai-lbl" style="color:var(--muted);margin-right:8px">AI off</span>
     <div class="dot" id="conn-dot"></div>
     <span id="conn-lbl">not connected</span>
+    <button onclick="sideTab('settings')" title="Settings" style="margin-left:10px;background:transparent;border:1px solid var(--border2);border-radius:5px;color:var(--muted);font-size:13px;padding:2px 7px;cursor:pointer;font-family:var(--mono);transition:all .15s" onmouseover="this.style.borderColor='var(--cx-gold)';this.style.color='var(--cx-gold)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--muted)'">⚙</button>
   </div>
 </header>
 
@@ -195,17 +245,11 @@ table.rt tr:hover td{background:#151a24}
     <button class="tnav on" onclick="sideTab('review')">Review</button>
     <button class="tnav"    onclick="sideTab('ai')">AI</button>
     <button class="tnav"    onclick="sideTab('rules')">Rules</button>
+    <button class="tnav"    onclick="sideTab('settings')">⚙</button>
   </div>
 
   <!-- ── REVIEW TAB ── -->
   <div class="tpanel on" id="tp-review">
-    <div class="sb">
-      <h4>Connection</h4>
-      <label>GitHub Token</label>
-      <input type="password" id="tok" placeholder="ghp_xxxxxxxxxxxx" oninput="onTok()">
-      <div class="th" id="th-tok">Enter token — cached 12h in browser.</div>
-      <button class="rbtn sec" onclick="testConn()">Test connection</button>
-    </div>
     <div class="sb">
       <h4>Scope</h4>
       <label>Milestone <span style="font-weight:300;color:var(--muted)">(optional — substring ok)</span></label>
@@ -306,6 +350,26 @@ table.rt tr:hover td{background:#151a24}
       <button class="rbtn sec" onclick="reloadRules()">↺ Reload rules from YAML</button>
     </div>
   </div>
+
+  <!-- ── SETTINGS TAB ── -->
+  <div class="tpanel" id="tp-settings">
+    <div class="sb">
+      <h4>GitHub Connection</h4>
+      <label>Personal Access Token</label>
+      <input type="password" id="tok" placeholder="ghp_xxxxxxxxxxxx" oninput="onTok()">
+      <div class="th" id="th-tok">Enter token — cached 12h in browser.</div>
+      <div class="th" style="margin-top:-2px">Needs <code style="font-family:var(--mono);background:var(--bg3);padding:0 3px;border-radius:3px">repo</code> read scope on catenax-eV/product-standardization-prod</div>
+      <button class="rbtn sec" onclick="testConn()">Test connection</button>
+    </div>
+    <div class="sb">
+      <h4>Repository</h4>
+      <label>Owner</label>
+      <input type="text" id="cfg-owner" value="catenax-eV" placeholder="org or user">
+      <label>Repository</label>
+      <input type="text" id="cfg-repo" value="product-standardization-prod" placeholder="repo name">
+      <button class="rbtn sec" onclick="applyRepoConfig()">Apply</button>
+    </div>
+  </div>
 </aside>
 
 <main id="mp">
@@ -314,7 +378,9 @@ table.rt tr:hover td{background:#151a24}
 
 <script>
 // ── Constants ─────────────────────────────────────────────────────────────────
-const OW='catenax-eV', RE='product-standardization-prod';
+let OW_='catenax-eV', RE_='product-standardization-prod';
+// aliases for backwards compat in templates
+const OW={toString(){return OW_;}}, RE={toString(){return RE_;}};
 const RULES_BASE='https://raw.githubusercontent.com/jmseidel2/product-standardization-review/main/';
 
 // ── Token cache ───────────────────────────────────────────────────────────────
@@ -359,11 +425,19 @@ function tg(k){S.gates[k]=!S.gates[k];document.getElementById('t'+k).classList.t
 function tc(k){S.checks[k]=!S.checks[k];const m={qg1rules:'cqg1',bc:'cbc',qg2rules:'cqg2',cac:'ccac'};document.getElementById(m[k]).classList.toggle('on',S.checks[k]);}
 
 function sideTab(t){
-  ['review','ai','rules'].forEach(x=>{
+  const tabs=['review','ai','rules','settings'];
+  tabs.forEach((x,i)=>{
     document.getElementById('tp-'+x).classList.toggle('on',x===t);
-    document.querySelectorAll('.tnav')[['review','ai','rules'].indexOf(x)].classList.toggle('on',x===t);
+    document.querySelectorAll('.tnav')[i].classList.toggle('on',x===t);
   });
   if(t==='rules') renderRulesTab();
+}
+function applyRepoConfig(){
+  const o=document.getElementById('cfg-owner').value.trim();
+  const r=document.getElementById('cfg-repo').value.trim();
+  if(o) OW_=o; if(r) RE_=r;
+  document.getElementById('hdr-repo').textContent=`${OW_} / ${RE_}`;
+  sideTab('review');
 }
 
 // ── Load YAML rules ───────────────────────────────────────────────────────────
