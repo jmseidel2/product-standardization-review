@@ -249,9 +249,8 @@ table.rt tr:hover td{background:#151a24}
       <h4>Provider</h4>
       <label>API provider</label>
       <select id="ai-provider" onchange="onProviderChange()">
-        <option value="claude">Claude (Anthropic)</option>
+        <option value="blockbrain">Blockbrain (coming soon)</option>
         <option value="openai">OpenAI-compatible</option>
-        <option value="custom">Custom (Blockbrain / other)</option>
       </select>
       <label>API Key</label>
       <input type="password" id="ai-key" placeholder="sk-… or API key" oninput="saveAIKey()">
@@ -261,7 +260,7 @@ table.rt tr:hover td{background:#151a24}
         <input type="text" id="ai-baseurl" placeholder="https://api.blockbrain.example/v1" oninput="saveAIKey()">
       </div>
       <label>Model</label>
-      <input type="text" id="ai-model" placeholder="claude-sonnet-4-20250514" value="claude-sonnet-4-20250514">
+      <input type="text" id="ai-model" placeholder="model name" value="">
       <button class="rbtn sec" onclick="testAI()">Test AI connection</button>
     </div>
     <div class="sb">
@@ -329,7 +328,7 @@ function onTok(){const t=document.getElementById('tok').value.trim();if(t){saveT
 function saveAIKey(){const k=document.getElementById('ai-key').value.trim();const u=document.getElementById('ai-baseurl')?.value.trim()||'';if(k)sessionStorage.setItem('tc4s_aikey',k);if(u)sessionStorage.setItem('tc4s_aiurl',u);}
 function getAIKey(){return document.getElementById('ai-key').value.trim()||sessionStorage.getItem('tc4s_aikey')||'';}
 function getAIUrl(){return document.getElementById('ai-baseurl')?.value.trim()||sessionStorage.getItem('tc4s_aiurl')||'';}
-function getAIModel(){return document.getElementById('ai-model').value.trim()||'claude-sonnet-4-20250514';}
+function getAIModel(){return document.getElementById('ai-model').value.trim()||'';}
 function getAIProvider(){return document.getElementById('ai-provider').value;}
 function aiEnabled(){return document.getElementById('ai-master').checked&&!!getAIKey();}
 function aiGroupOn(g){return document.getElementById('ai-master').checked&&document.getElementById('ai-'+g)?.checked;}
@@ -350,8 +349,8 @@ function updateAILabels(){
 }
 function onProviderChange(){
   const p=getAIProvider();
-  document.getElementById('custom-url-row').style.display=(p==='custom')?'block':'none';
-  document.getElementById('ai-model').value=p==='claude'?'claude-sonnet-4-20250514':p==='openai'?'gpt-4o':'';
+  document.getElementById('custom-url-row').style.display=(p==='blockbrain'||p==='custom')?'block':'none';
+  document.getElementById('ai-model').value=p==='openai'?'gpt-4o':'';
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -417,21 +416,19 @@ async function callAI(prompt,context){
   if(!key) return null;
   const messages=[{role:'user',content:`${prompt}\n\nContent to analyse:\n\`\`\`\n${context.slice(0,3000)}\n\`\`\``}];
   const systemPrompt='You are a TC4S (Technical Committee for Standardisation) reviewer for Catena-X standards. Be precise, objective, and concise. Always respond with valid JSON in the exact format requested. Do not add explanations outside the JSON structure.';
-  let url,headers,body;
-  if(provider==='claude'){
-    url='https://api.anthropic.com/v1/messages';
-    headers={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
-    body=JSON.stringify({model,max_tokens:400,system:systemPrompt,messages});
-  }else{
-    url=(provider==='custom'?getAIUrl():'https://api.openai.com/v1')+'/chat/completions';
-    headers={'Content-Type':'application/json','Authorization':`Bearer ${key}`};
-    body=JSON.stringify({model,max_tokens:400,temperature:0.1,messages:[{role:'system',content:systemPrompt},...messages]});
+  if(provider==='blockbrain'){
+    // Blockbrain integration — coming soon
+    return null;
   }
+  let url,headers,body;
+  url=(provider==='custom'?getAIUrl():'https://api.openai.com/v1')+'/chat/completions';
+  headers={'Content-Type':'application/json','Authorization':`Bearer ${key}`};
+  body=JSON.stringify({model,max_tokens:400,temperature:0.1,messages:[{role:'system',content:systemPrompt},...messages]});
   try{
     const r=await fetch(url,{method:'POST',headers,body});
     if(!r.ok) return null;
     const d=await r.json();
-    const text=provider==='claude'?d.content?.[0]?.text:d.choices?.[0]?.message?.content;
+    const text=d.choices?.[0]?.message?.content;
     if(!text) return null;
     return JSON.parse(text.replace(/```json|```/g,'').trim());
   }catch{return null;}
@@ -850,8 +847,10 @@ function getSelected(){
     if(cb.dataset.type==='issue') selIssues.add(parseInt(cb.value));
     else selPRs.add(parseInt(cb.value));
   });
-  const allIssues=[...f.msIssues,...f.otherIssues];
-  const allPRs=[...f.msPRs,...f.otherPRs];
+  // Deduplicate by number — same item can appear in both ms and other arrays
+  const seenI=new Set(),seenP=new Set();
+  const allIssues=[...f.msIssues,...f.otherIssues].filter(i=>{if(seenI.has(i.number))return false;seenI.add(i.number);return true;});
+  const allPRs=[...f.msPRs,...f.otherPRs].filter(p=>{if(seenP.has(p.number))return false;seenP.add(p.number);return true;});
   return{
     issues:allIssues.filter(i=>selIssues.has(i.number)),
     prs:allPRs.filter(p=>selPRs.has(p.number)),
