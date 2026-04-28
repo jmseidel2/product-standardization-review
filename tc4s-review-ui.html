@@ -631,7 +631,27 @@ async function testAI(){
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const has=(t,...terms)=>terms.some(x=>(t||'').toLowerCase().includes(x.toLowerCase()));
 const wc=t=>(t||'').split(/\s+/).filter(Boolean).length;
-function sec(b,h){const m=(b||'').match(new RegExp(`#+\\s*${h}[^\\n]*\\n([\\s\\S]*?)(?=\\n#+|$)`,'i'));return m?m[1].trim():null;}
+function sec(b,h){
+  if(!b) return null;
+  // EOI = end-of-input lookahead (avoids the m-flag $ pitfall, which matches end-of-LINE).
+  const EOI='(?![\\s\\S])';
+  // Markdown heading: # / ## / ### Management Summary
+  let m=b.match(new RegExp(`#+\\s*${h}[^\\n]*\\n([\\s\\S]*?)(?=\\n#+\\s|${EOI})`,'i'));
+  if(m) return m[1].trim();
+  // Numbered heading on its own line: "1. Management Summary", "1) Management Summary"
+  // Stops at next top-level numbered heading (e.g. "2. Foo"), markdown heading, or end-of-body.
+  // Subsections like "1.1 Standard" don't count as next-section because the regex requires
+  // a single \d+ followed by '.' or ')' followed by whitespace + capital letter.
+  m=b.match(new RegExp(`^[\\s>*_]*\\d+[.)]\\s+${h}[^\\n]*\\n([\\s\\S]*?)(?=\\n\\s*\\d+[.)]\\s+[A-Z]|\\n#+\\s|${EOI})`,'im'));
+  if(m) return m[1].trim();
+  // Bold heading: **Management Summary**
+  m=b.match(new RegExp(`\\*\\*\\s*${h}\\s*\\*\\*[^\\n]*\\n([\\s\\S]*?)(?=\\n\\*\\*|\\n#+\\s|\\n\\s*\\d+[.)]\\s+[A-Z]|${EOI})`,'i'));
+  if(m) return m[1].trim();
+  // Plain line containing only the heading, optionally with trailing colon
+  m=b.match(new RegExp(`^[\\s>*_]*${h}\\s*:?\\s*\\n([\\s\\S]*?)(?=\\n\\s*\\d+[.)]\\s+[A-Z]|\\n#+\\s|${EOI})`,'im'));
+  if(m) return m[1].trim();
+  return null;
+}
 function cxIds(t){return[...new Set((t.match(/CX-0\d{3}/gi)||[]))];}
 function semP(s){const m=s.match(/(\d+)\.(\d+)\.(\d+)\s*(?:→|->|to)\s*(\d+)\.(\d+)\.(\d+)/i);if(!m)return null;const[,ma,mi,pa,mb,mib,pb]=m.map(Number);return mb>ma?'major':mib>mi?'minor':pb>pa?'patch':null;}
 function classify(issue){
