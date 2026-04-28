@@ -245,7 +245,7 @@ table.rt tr:hover td{background:#1e2018}
   <div class="logo">TC4S<span>/</span>REVIEW</div>
   <div style="font-size:11px;color:var(--muted);font-family:var(--mono)" id="hdr-repo">catenax-eV / product-standardization-prod</div>
   <div class="hst">
-    <div class="dot" id="ai-dot" title="AI status"></div>
+    <div class="dot" id="ai-dot" title="AI status — gray: off · gold: on, untested · green: test passed · red: test failed"></div>
     <span id="ai-lbl" style="color:var(--muted);margin-right:8px">AI off</span>
     <div class="dot" id="conn-dot"></div>
     <span id="conn-lbl">not connected</span>
@@ -323,7 +323,8 @@ table.rt tr:hover td{background:#1e2018}
         <div class="th">OpenAI-compatible endpoint root (without <code style="font-family:var(--mono)">/chat/completions</code>).</div>
       </div>
       <label>Model</label>
-      <input type="text" id="ai-model" placeholder="model name" value="">
+      <select id="ai-model-select" onchange="onModelSelectChange()" style="margin-bottom:6px"></select>
+      <input type="text" id="ai-model" placeholder="model name" value="" style="display:none" oninput="saveAIKey()">
       <button class="rbtn sec" id="ai-test-btn" onclick="testAI()">Test AI connection</button>
       <div class="th" id="ai-test-status" style="margin-top:4px"></div>
     </div>
@@ -411,7 +412,14 @@ function getTok(){return document.getElementById('tok').value.trim()||loadTok()|
 function onTok(){const t=document.getElementById('tok').value.trim();if(t){saveTok(t);const h=Math.max(0,Math.round(((+localStorage.getItem(TE)||0)-Date.now())/36e5));document.getElementById('th-tok').textContent=`Token cached ~${h}h`;document.getElementById('th-tok').className='th ok';loadMilestones();}}
 
 // ── AI key (sessionStorage only) ─────────────────────────────────────────────
-function saveAIKey(){const k=document.getElementById('ai-key').value.trim();const u=document.getElementById('ai-baseurl')?.value.trim()||'';if(k)sessionStorage.setItem('tc4s_aikey',k);if(u)sessionStorage.setItem('tc4s_aiurl',u);}
+function saveAIKey(){
+  const k=document.getElementById('ai-key').value.trim();
+  const u=document.getElementById('ai-baseurl')?.value.trim()||'';
+  const m=document.getElementById('ai-model').value.trim();
+  if(k)sessionStorage.setItem('tc4s_aikey',k);
+  if(u)sessionStorage.setItem('tc4s_aiurl',u);
+  if(m)sessionStorage.setItem('tc4s_aimodel',m);
+}
 function getAIKey(){return document.getElementById('ai-key').value.trim()||sessionStorage.getItem('tc4s_aikey')||'';}
 function getAIUrl(){return document.getElementById('ai-baseurl')?.value.trim()||sessionStorage.getItem('tc4s_aiurl')||'';}
 function getAIModel(){return document.getElementById('ai-model').value.trim()||'';}
@@ -419,13 +427,27 @@ function getAIProvider(){return document.getElementById('ai-provider').value;}
 function aiEnabled(){return document.getElementById('ai-master').checked&&!!getAIKey();}
 function aiGroupOn(g){return document.getElementById('ai-master').checked&&document.getElementById('ai-'+g)?.checked;}
 
+// AI status: 'off' | 'untested' | 'ok' | 'err'
+let _AI_STATUS='off';
+function setAIStatus(s,detail){
+  _AI_STATUS=s;
+  const dot=document.getElementById('ai-dot'),lbl=document.getElementById('ai-lbl');
+  const map={
+    off:{cls:'dot',label:'AI off',color:'var(--muted)'},
+    untested:{cls:'dot ai',label:'AI on (untested)',color:'var(--cx-gold)'},
+    ok:{cls:'dot ok',label:detail?`AI ✓ ${detail}`:'AI ✓ connected',color:'var(--cx-lime)'},
+    err:{cls:'dot err',label:detail?`AI ✗ ${detail}`:'AI ✗ failed',color:'var(--cx-signal)'},
+  };
+  const m=map[s]||map.off;
+  dot.className=m.cls;lbl.textContent=m.label;lbl.style.color=m.color;
+}
 function toggleAI(){
   const on=document.getElementById('ai-master').checked;
   document.getElementById('ai-master-lbl').textContent=on?'AI checks enabled':'AI checks disabled';
   document.getElementById('ai-master-lbl').className='ai-label'+(on?' on':'');
-  document.getElementById('ai-dot').className='dot'+(on?' ai':'');
-  document.getElementById('ai-lbl').textContent=on?'AI on':'AI off';
-  document.getElementById('ai-lbl').style.color=on?'var(--purple)':'var(--muted)';
+  if(!on) setAIStatus('off');
+  else if(_AI_STATUS==='ok'||_AI_STATUS==='err') setAIStatus(_AI_STATUS); // preserve last test result
+  else setAIStatus('untested');
 }
 function updateAILabels(){
   ['qg1','pr','bc','cac','cr'].forEach(g=>{
@@ -433,10 +455,33 @@ function updateAILabels(){
     if(document.getElementById('ai-'+g+'-lbl')) document.getElementById('ai-'+g+'-lbl').className='ai-label'+(on?' on':'');
   });
 }
+// Per-provider model suggestions. Custom is always offered for tenant-specific deployments.
+const MODEL_OPTIONS={
+  openai:['gpt-4o','gpt-4o-mini','gpt-4-turbo','gpt-4','gpt-3.5-turbo','o1-mini'],
+  blockbrain:['gpt-4o','gpt-4o-mini','gpt-4','claude-3-5-sonnet','claude-3-haiku','llama-3.1-70b','mistral-large'],
+};
+function populateModelOptions(){
+  const p=getAIProvider();
+  const sel=document.getElementById('ai-model-select');
+  const input=document.getElementById('ai-model');
+  const opts=MODEL_OPTIONS[p]||MODEL_OPTIONS.openai;
+  const current=input.value.trim();
+  sel.innerHTML=opts.map(m=>`<option value="${m}">${m}</option>`).join('')+'<option value="__custom">Custom…</option>';
+  if(current&&opts.includes(current)){sel.value=current;input.style.display='none';}
+  else if(current){sel.value='__custom';input.style.display='block';}
+  else{sel.value=opts[0];input.value=opts[0];input.style.display='none';saveAIKey();}
+}
+function onModelSelectChange(){
+  const sel=document.getElementById('ai-model-select');
+  const input=document.getElementById('ai-model');
+  if(sel.value==='__custom'){input.style.display='block';input.value='';input.focus();}
+  else{input.style.display='none';input.value=sel.value;saveAIKey();}
+}
 function onProviderChange(){
   const p=getAIProvider();
   document.getElementById('custom-url-row').style.display=(p==='blockbrain'||p==='custom')?'block':'none';
-  document.getElementById('ai-model').value=p==='openai'?'gpt-4o':'';
+  document.getElementById('ai-model').value='';
+  populateModelOptions();
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -586,21 +631,17 @@ async function callAI(prompt,context,opts={}){
 async function testAI(){
   const btn=document.getElementById('ai-test-btn');
   const status=document.getElementById('ai-test-status');
-  const dot=document.getElementById('ai-dot');
   btn.textContent='Testing…';btn.disabled=true;btn.style.color='';btn.style.borderColor='';
-  status.textContent='';status.className='th';
+  status.textContent='';status.className='th';status.style.color='';
   try{
     const r=await callAI('Respond with only this JSON: {"result":"pass","confidence":1.0,"finding":"AI connection successful"}','test');
-    if(r?.finding){
-      btn.textContent='✓ Connected';
-      btn.style.color='var(--cx-lime)';
-      btn.style.borderColor='var(--cx-lime)';
-      status.textContent=`OK · ${getAIProvider()} · ${getAIModel()||'default model'}`;
-      status.className='th ok';
-      if(document.getElementById('ai-master').checked) dot.className='dot ai';
-    }else{
-      throw new Error('Unexpected response shape.');
-    }
+    if(!r?.finding) throw new Error('Unexpected response shape.');
+    btn.textContent='✓ Connected';
+    btn.style.color='var(--cx-lime)';
+    btn.style.borderColor='var(--cx-lime)';
+    status.textContent=`OK · ${getAIProvider()} · ${getAIModel()||'default model'}`;
+    status.className='th ok';
+    setAIStatus('ok',`${getAIProvider()}`);
   }catch(e){
     btn.textContent='✗ Failed';
     btn.style.color='var(--cx-signal)';
@@ -608,13 +649,9 @@ async function testAI(){
     status.textContent=e.message||'Connection failed.';
     status.className='th';
     status.style.color='var(--cx-signal)';
+    setAIStatus('err',(e.message||'failed').slice(0,40));
   }finally{
     btn.disabled=false;
-    setTimeout(()=>{
-      btn.textContent='Test AI connection';
-      btn.style.color='';btn.style.borderColor='';
-      status.style.color='';
-    },6000);
   }
 }
 
@@ -781,12 +818,18 @@ function runQG2Checks(pr,files,diffs){
   if(en('QG2-02')){const ms=sec(B,'Management Summary');
     if(!ms)R.push(F('QG2-02','Management Summary (1.1-1.5)','Section missing.','','CW2-2026','PR body'));
     else{const miss=[];
-      if(!has(ms,'1.1','standard id','version','domain'))miss.push('1.1');
-      if(!has(ms,'1.2','rationale','why'))miss.push('1.2');
-      if(!has(ms,'1.3','changed'))miss.push('1.3');
-      if(!has(ms,'1.4','consequence'))miss.push('1.4');
-      if(!has(ms,'1.5','compat','backward'))miss.push('1.5');
-      if(miss.length>0)R.push(W('QG2-02','Management Summary (1.1-1.5)',`Missing: ${miss.join(', ')}.`,'','CW2-2026','PR body → '+miss[0]));
+      if(!has(ms,'1.1','standard id','version','domain'))miss.push(['1.1','Standard ID / version']);
+      if(!has(ms,'1.2','rationale','why'))miss.push(['1.2','Rationale (why)']);
+      if(!has(ms,'1.3','changed'))miss.push(['1.3','Changes (what)']);
+      if(!has(ms,'1.4','consequence'))miss.push(['1.4','Consequences']);
+      if(!has(ms,'1.5','compat','backward'))miss.push(['1.5','Backward Compatibility statement']);
+      if(miss.length>0){
+        const ids=miss.map(x=>x[0]).join(', ');
+        const dynSugg=`Add the missing sub-section${miss.length>1?'s':''} to the Management Summary: ${miss.map(x=>`${x[0]} ${x[1]}`).join('; ')}.`;
+        const r=W('QG2-02','Management Summary (1.1-1.5)',`Missing: ${ids}.`,'','CW2-2026','PR body → '+miss[0][0]);
+        r.suggestion=dynSugg;
+        R.push(r);
+      }
       else R.push(P('QG2-02','Management Summary (1.1-1.5)','All sections present.','','CW2-2026','PR body'));}}
 
   R.push(/(fixes|closes|resolves|refs?)\s+#\d+/i.test(B)||/#\d{3,}/.test(B)
@@ -1143,7 +1186,8 @@ function rrow(r,itemUrl=''){
   const hasAI=r.aiResult&&aiEnabled();
   const aiBlock=hasAI?`<div class="ai-finding">${r.aiResult.finding||''}</div><div class="ai-conf">AI confidence: ${Math.round((r.aiResult.confidence||0)*100)}%</div>`:'';
   const isFailing=r.result==='FAIL'||r.result==='ADVISORY'||r.result==='AI-FAIL'||r.result==='AI-ADVISORY';
-  const suggBlock=isFailing&&SUGGESTIONS[r.id]?`<div class="sugg-box">💡 ${SUGGESTIONS[r.id]}</div>`:'';
+  const suggText=isFailing?(r.suggestion||SUGGESTIONS[r.id]||''):'';
+  const suggBlock=suggText?`<div class="sugg-box">💡 ${suggText}</div>`:'';
   const locHtml=r.loc?(itemUrl
     ?`<a href="${itemUrl}" target="_blank" class="floc" style="text-decoration:none">${r.loc} ↗</a>`
     :`<div class="floc">${r.loc}</div>`):'';
@@ -1295,7 +1339,7 @@ function exportMD(){
   const d=window._LR;if(!d)return;
   const ic=r=>({PASS:'✅',FAIL:r.blocking?'🚫':'❌',ADVISORY:'⚠️',SKIP:'–','AI-ADVISORY':'🤖⚠️','AI-FAIL':'🤖❌'})[r.result]||'–';
   const tbl=rows=>`| | Rule | Result | Finding | AI Finding | Suggestion |\n|---|---|---|---|---|---|\n`+
-    rows.filter(r=>r.result!=='SKIP').map(r=>`| ${ic(r)} | \`${r.id}\` ${r.title} | ${r.result} | ${r.note||'—'} | ${r.aiResult?.finding||'—'} | ${(r.result==='FAIL'||r.result==='ADVISORY')?(SUGGESTIONS[r.id]||'—'):'—'} |`).join('\n');
+    rows.filter(r=>r.result!=='SKIP').map(r=>`| ${ic(r)} | \`${r.id}\` ${r.title} | ${r.result} | ${r.note||'—'} | ${r.aiResult?.finding||'—'} | ${(r.result==='FAIL'||r.result==='ADVISORY')?(r.suggestion||SUGGESTIONS[r.id]||'—'):'—'} |`).join('\n');
   let md=`# TC4S Review Report\n\n**Date:** ${new Date().toISOString().split('T')[0]}  \n**Repo:** ${OW}/${RE}  \n**AI:** ${aiEnabled()?'enabled ('+getAIProvider()+')':'disabled'}\n\n---\n\n## QG-1 – Issues\n\n`;
   for(const g of [{k:'SR',l:'Standard Requests'},{k:'CR',l:'Change Requests'},{k:'Patch',l:'Patch Requests'}]){
     const items=d.issueR.filter(r=>r.type===g.k&&exportSelected(r.item.number,'issue'));
@@ -1342,7 +1386,7 @@ function exportXLSX(){
     for(const chk of r.qg1){
       if(chk.result==='SKIP') continue;
       const isFailing=chk.result==='FAIL'||chk.result==='ADVISORY'||chk.result==='AI-FAIL'||chk.result==='AI-ADVISORY';
-      qg1Rows.push([r.item.number,r.item.title,r.type,chk.id,chk.title,chk.result,chk.note||'',chk.source||'',chk.loc||'',chk.aiResult?.finding||'',chk.aiResult?Math.round((chk.aiResult.confidence||0)*100)+'%':'',isFailing?(SUGGESTIONS[chk.id]||''):'']);
+      qg1Rows.push([r.item.number,r.item.title,r.type,chk.id,chk.title,chk.result,chk.note||'',chk.source||'',chk.loc||'',chk.aiResult?.finding||'',chk.aiResult?Math.round((chk.aiResult.confidence||0)*100)+'%':'',isFailing?(chk.suggestion||SUGGESTIONS[chk.id]||''):'']);
     }
   }
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(qg1Rows),'QG1 Issues');
@@ -1355,7 +1399,7 @@ function exportXLSX(){
     for(const chk of r.qg2){
       if(chk.result==='SKIP') continue;
       const isFailing=chk.result==='FAIL'||chk.result==='ADVISORY'||chk.result==='AI-FAIL'||chk.result==='AI-ADVISORY';
-      qg2Rows.push([r.item.number,r.item.title,chk.id,chk.title,chk.result,chk.note||'',chk.source||'',chk.loc||'',chk.aiResult?.finding||'',chk.aiResult?Math.round((chk.aiResult.confidence||0)*100)+'%':'',isFailing?(SUGGESTIONS[chk.id]||''):'']);
+      qg2Rows.push([r.item.number,r.item.title,chk.id,chk.title,chk.result,chk.note||'',chk.source||'',chk.loc||'',chk.aiResult?.finding||'',chk.aiResult?Math.round((chk.aiResult.confidence||0)*100)+'%':'',isFailing?(chk.suggestion||SUGGESTIONS[chk.id]||''):'']);
     }
   }
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(qg2Rows),'QG2 PRs');
@@ -1389,6 +1433,9 @@ const FALLBACK_QG2=[
 window.addEventListener('DOMContentLoaded',async()=>{
   const t=loadTok();if(t){document.getElementById('tok').value=t;const h=Math.max(0,Math.round(((+localStorage.getItem(TE)||0)-Date.now())/36e5));document.getElementById('th-tok').textContent=`Token cached ~${h}h`;document.getElementById('th-tok').className='th ok';}
   const ak=sessionStorage.getItem('tc4s_aikey');if(ak)document.getElementById('ai-key').value=ak;
+  const au=sessionStorage.getItem('tc4s_aiurl');if(au)document.getElementById('ai-baseurl').value=au;
+  const am=sessionStorage.getItem('tc4s_aimodel');if(am)document.getElementById('ai-model').value=am;
+  onProviderChange();
   await loadRules();
   if(getTok()) loadMilestones();
 });
