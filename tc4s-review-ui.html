@@ -100,13 +100,26 @@ select option{background:var(--bg3)}
 
 /* ── Rules tab ── */
 .rule-item{background:var(--bg3);border:1px solid var(--border);border-radius:7px;
-  padding:8px 10px;margin-bottom:5px;display:flex;align-items:center;gap:8px}
+  padding:7px 9px;margin-bottom:4px;display:flex;align-items:center;gap:7px;transition:opacity .15s}
+.rule-item.off{opacity:.45}
 .ri-id{font-size:10px;font-family:var(--mono);color:var(--muted);min-width:64px}
 .ri-title{font-size:11px;flex:1;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ri-badges{display:flex;gap:4px;flex-shrink:0}
 .rbadge{font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:3px;font-weight:500}
 .rb-act{background:#192310;color:var(--cx-lime)}.rb-rec{background:#2a1e00;color:var(--cx-gold)}
 .rb-off{background:var(--bg);color:var(--muted)}.rb-ai{background:#251e10;color:var(--cx-gold)}
+.sw.mini{width:24px;height:13px}
+.sw.mini .sw-thumb{width:9px;height:9px;top:2px;left:2px}
+.sw.mini input:checked~.sw-track .sw-thumb{transform:translateX(11px)}
+.sw input:checked~.sw-track.ai{background:var(--cx-grey)}
+.sw-placeholder{display:inline-block;width:24px;height:13px;flex-shrink:0}
+.rule-tools{display:flex;align-items:center;gap:4px;padding:0 2px 7px;flex-wrap:wrap;font-family:var(--mono)}
+.rule-tools .lbl{font-size:10px;color:var(--muted)}
+.expbtn.xs{padding:1px 6px;font-size:9px}
+.rule-section-hdr{display:flex;align-items:center;gap:6px;margin:2px 0 5px;font-size:9px;
+  font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.rule-section-hdr span.col-rule{width:24px;text-align:center}
+.rule-section-hdr span.col-ai{width:24px;text-align:center;color:var(--cx-grey)}
 
 /* ── Main content ── */
 main{overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:12px}
@@ -252,9 +265,14 @@ table.rt tr:hover td{background:#1e2018}
   <div class="tpanel on" id="tp-review">
     <div class="sb">
       <h4>Scope</h4>
-      <label>Milestone <span style="font-weight:300;color:var(--muted)">(optional — substring ok)</span></label>
-      <input type="text" id="ms" placeholder="e.g. 26.06 or CX-Titan" list="ms-list" autocomplete="off">
-      <datalist id="ms-list"></datalist>
+      <label>Milestone <span style="font-weight:300;color:var(--muted)">(optional)</span></label>
+      <div style="display:flex;gap:5px;align-items:stretch;margin-bottom:8px">
+        <select id="ms" style="flex:1;margin-bottom:0">
+          <option value="">— All open milestones —</option>
+        </select>
+        <button class="rbtn sec" onclick="loadMilestones()" title="Reload milestones from GitHub" style="width:auto;padding:0 10px;margin-bottom:0;font-size:14px">↻</button>
+      </div>
+      <div class="th" id="ms-hint">Connect to GitHub to load milestones.</div>
       <label>Gate</label>
       <div class="tr">
         <button class="tog on" id="tqg1" onclick="tg('qg1')">QG1 Issues</button>
@@ -388,7 +406,7 @@ const TK='tc4s_tok',TE='tc4s_exp';
 function saveTok(t){try{localStorage.setItem(TK,t);localStorage.setItem(TE,Date.now()+12*36e5);}catch{}}
 function loadTok(){try{const e=+localStorage.getItem(TE)||0;if(Date.now()>e){localStorage.removeItem(TK);localStorage.removeItem(TE);return null;}return localStorage.getItem(TK);}catch{return null;}}
 function getTok(){return document.getElementById('tok').value.trim()||loadTok()||'';}
-function onTok(){const t=document.getElementById('tok').value.trim();if(t){saveTok(t);const h=Math.max(0,Math.round(((+localStorage.getItem(TE)||0)-Date.now())/36e5));document.getElementById('th-tok').textContent=`Token cached ~${h}h`;document.getElementById('th-tok').className='th ok';}}
+function onTok(){const t=document.getElementById('tok').value.trim();if(t){saveTok(t);const h=Math.max(0,Math.round(((+localStorage.getItem(TE)||0)-Date.now())/36e5));document.getElementById('th-tok').textContent=`Token cached ~${h}h`;document.getElementById('th-tok').className='th ok';loadMilestones();}}
 
 // ── AI key (sessionStorage only) ─────────────────────────────────────────────
 function saveAIKey(){const k=document.getElementById('ai-key').value.trim();const u=document.getElementById('ai-baseurl')?.value.trim()||'';if(k)sessionStorage.setItem('tc4s_aikey',k);if(u)sessionStorage.setItem('tc4s_aiurl',u);}
@@ -437,6 +455,8 @@ function applyRepoConfig(){
   const r=document.getElementById('cfg-repo').value.trim();
   if(o) OW_=o; if(r) RE_=r;
   document.getElementById('hdr-repo').textContent=`${OW_} / ${RE_}`;
+  window._MS=null;
+  loadMilestones();
   sideTab('review');
 }
 
@@ -460,17 +480,49 @@ async function loadRules(){
 async function reloadRules(){document.getElementById('rules-status').textContent='Reloading…';await loadRules();renderRulesTab();}
 
 function renderRulesTab(){
-  function ruleItem(r){
+  function ruleItem(r,grp){
+    const ruleOn=r.enabled!==false;
+    const aiSupported=!!r.ai_check;
+    const aiOn=aiSupported&&r.ai_enabled!==false;
+    const ruleSw=`<label class="sw mini" title="Enable rule"><input type="checkbox" ${ruleOn?'checked':''} onchange="toggleRuleField('${grp}','${r.id}','enabled',this.checked)"><div class="sw-track"><div class="sw-thumb"></div></div></label>`;
+    const aiSw=aiSupported
+      ?`<label class="sw mini" title="Enable AI semantic check for this rule"><input type="checkbox" ${aiOn?'checked':''} onchange="toggleRuleField('${grp}','${r.id}','ai_enabled',this.checked)"><div class="sw-track ai"><div class="sw-thumb"></div></div></label>`
+      :`<span class="sw-placeholder" title="No AI check available for this rule"></span>`;
     const badges=[
       r.status==='Active'?'<span class="rbadge rb-act">Active</span>':'<span class="rbadge rb-rec">Rec.</span>',
-      r.enabled===false?'<span class="rbadge rb-off">off</span>':'',
-      r.ai_check&&r.enabled!==false?'<span class="rbadge rb-ai">AI</span>':'',
       r.placeholder?'<span class="rbadge rb-off">placeholder</span>':'',
     ].filter(Boolean).join('');
-    return `<div class="rule-item"><span class="ri-id">${r.id}</span><span class="ri-title" title="${r.title}">${r.title}</span><div class="ri-badges">${badges}</div></div>`;
+    return `<div class="rule-item${ruleOn?'':' off'}">${ruleSw}${aiSw}<span class="ri-id">${r.id}</span><span class="ri-title" title="${r.title}">${r.title}</span><div class="ri-badges">${badges}</div></div>`;
   }
-  document.getElementById('rl-qg1').innerHTML=S.rules.qg1.map(ruleItem).join('');
-  document.getElementById('rl-qg2').innerHTML=S.rules.qg2.map(ruleItem).join('');
+  function tools(grp){
+    const total=S.rules[grp].length,en=S.rules[grp].filter(r=>r.enabled!==false).length;
+    const aiTotal=S.rules[grp].filter(r=>r.ai_check).length;
+    const aiOn=S.rules[grp].filter(r=>r.ai_check&&r.ai_enabled!==false).length;
+    return `<div class="rule-tools">
+      <span class="lbl">Rules ${en}/${total}:</span>
+      <button class="expbtn xs" onclick="toggleAllRules('${grp}','enabled',true)">All</button>
+      <button class="expbtn xs" onclick="toggleAllRules('${grp}','enabled',false)">None</button>
+      <span class="lbl" style="margin-left:6px;color:var(--cx-grey)">AI ${aiOn}/${aiTotal}:</span>
+      <button class="expbtn xs" onclick="toggleAllRules('${grp}','ai_enabled',true)">All</button>
+      <button class="expbtn xs" onclick="toggleAllRules('${grp}','ai_enabled',false)">None</button>
+    </div>
+    <div class="rule-section-hdr"><span class="col-rule" title="Rule on/off">on</span><span class="col-ai" title="AI semantic check on/off">ai</span><span style="flex:1"></span></div>`;
+  }
+  document.getElementById('rl-qg1').innerHTML=tools('qg1')+S.rules.qg1.map(r=>ruleItem(r,'qg1')).join('');
+  document.getElementById('rl-qg2').innerHTML=tools('qg2')+S.rules.qg2.map(r=>ruleItem(r,'qg2')).join('');
+}
+function toggleRuleField(grp,id,field,val){
+  const r=S.rules[grp].find(x=>x.id===id);
+  if(!r) return;
+  r[field]=val;
+  renderRulesTab();
+}
+function toggleAllRules(grp,field,val){
+  S.rules[grp].forEach(r=>{
+    if(field==='ai_enabled'&&!r.ai_check) return;
+    r[field]=val;
+  });
+  renderRulesTab();
 }
 
 // ── GitHub API ────────────────────────────────────────────────────────────────
@@ -482,7 +534,26 @@ async function gh(path){
   return r.json();
 }
 async function ghAll(path){const out=[];let p=1;while(true){const sep=path.includes('?')?'&':'?';const d=await gh(`${path}${sep}per_page=100&page=${p}`);if(!Array.isArray(d)||d.length===0)break;out.push(...d);if(d.length<100)break;p++;}return out;}
-async function testConn(){const dot=document.getElementById('conn-dot'),lbl=document.getElementById('conn-lbl');dot.className='dot';lbl.textContent='checking…';try{const r=await gh(`/repos/${OW}/${RE}`);dot.className='dot ok';lbl.textContent=`connected · ${r.open_issues_count} open`;if(document.getElementById('tok').value.trim())saveTok(document.getElementById('tok').value.trim());}catch(e){dot.className='dot err';lbl.textContent=e.message;}}
+async function testConn(){const dot=document.getElementById('conn-dot'),lbl=document.getElementById('conn-lbl');dot.className='dot';lbl.textContent='checking…';try{const r=await gh(`/repos/${OW}/${RE}`);dot.className='dot ok';lbl.textContent=`connected · ${r.open_issues_count} open`;if(document.getElementById('tok').value.trim())saveTok(document.getElementById('tok').value.trim());loadMilestones();}catch(e){dot.className='dot err';lbl.textContent=e.message;}}
+
+// ── Milestones ────────────────────────────────────────────────────────────────
+async function loadMilestones(){
+  const sel=document.getElementById('ms'),hint=document.getElementById('ms-hint');
+  if(!getTok()){hint.textContent='Connect to GitHub to load milestones.';hint.className='th';return;}
+  const prev=sel.value;
+  hint.textContent='Loading milestones…';hint.className='th';
+  try{
+    const ms=await ghAll(`/repos/${OW}/${RE}/milestones?state=all&sort=due_on&direction=desc`);
+    window._MS=ms;
+    const opts=['<option value="">— All open milestones —</option>',
+      ...ms.map(m=>`<option value="${m.number}">${m.title}${m.state==='closed'?' (closed)':''}</option>`)];
+    sel.innerHTML=opts.join('');
+    if(prev&&ms.some(m=>String(m.number)===prev)) sel.value=prev;
+    hint.textContent=`${ms.length} milestone(s) loaded.`;hint.className='th ok';
+  }catch(e){
+    hint.textContent=`Failed: ${e.message.slice(0,80)}`;hint.className='th';
+  }
+}
 
 // ── AI API ────────────────────────────────────────────────────────────────────
 async function callAI(prompt,context){
@@ -756,6 +827,7 @@ async function enhanceWithAI(results,context,gate){
   for(const r of results){
     const ruleDef=allRules.find(x=>x.id===r.id);
     if(!ruleDef?.ai_check||!ruleDef?.ai_prompt) continue;
+    if(ruleDef.ai_enabled===false) continue;
     const groupMap={'QG1-':'qg1','QG2-':'pr','BC-':'bc','CAC-':'cac','CR-':'cr'};
     const group=Object.entries(groupMap).find(([k])=>r.id.startsWith(k))?.[1]||'qg1';
     if(!aiGroupOn(group)) continue;
@@ -777,20 +849,18 @@ async function fetchItems(){
   mp.innerHTML=`<div class="logbox" id="lb"></div><div class="empty"><div class="spin"></div><div style="font-family:var(--mono);font-size:11px">Fetching…</div></div>`;
   document.getElementById('run-btn').disabled=true;
   try{
-    log('Loading milestones…','linf');
-    const allMilestones=await ghAll(`/repos/${OW}/${RE}/milestones?state=all`);
-    // Populate datalist for autocomplete
-    const dl=document.getElementById('ms-list');
-    dl.innerHTML=allMilestones.map(m=>`<option value="${m.title}">`).join('');
+    let allMilestones=window._MS;
+    if(!allMilestones){
+      log('Loading milestones…','linf');
+      allMilestones=await ghAll(`/repos/${OW}/${RE}/milestones?state=all`);
+      window._MS=allMilestones;
+    }
 
-    const msInput=document.getElementById('ms').value.trim();
+    const msVal=document.getElementById('ms').value;
     let ms=null,msLabel='all open';
-    if(msInput){
-      ms=allMilestones.find(x=>x.title===msInput)||allMilestones.find(x=>x.title.toLowerCase().includes(msInput.toLowerCase()));
-      if(!ms){
-        const avail=allMilestones.map(x=>`  • ${x.title}`).join('\n')||'  (none found)';
-        throw new Error(`Milestone "${msInput}" not found.\n\nAvailable milestones:\n${avail}`);
-      }
+    if(msVal){
+      ms=allMilestones.find(x=>String(x.number)===String(msVal));
+      if(!ms) throw new Error(`Milestone #${msVal} not found — try ↻ reload.`);
       msLabel=ms.title;
       log(`Milestone: ${ms.title}`,'lok');
     }
@@ -988,7 +1058,8 @@ Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"
       if(aiEnabled()) qg2=await enhanceWithAI(qg2,prContext,'QG2');
       aP.push({item:pr,qg2,files});
     }
-    const msLabel=document.getElementById('ms').value.trim()||'selected items';
+    const msSel=document.getElementById('ms');
+    const msLabel=msSel.selectedIndex>0?msSel.options[msSel.selectedIndex].text:'selected items';
     renderResults(aI,aP,msLabel);
   }catch(e){
     mp.innerHTML=`<div class="empty" style="color:var(--red)"><div style="font-size:20px">✕</div><div style="max-width:420px;text-align:center;white-space:pre-wrap;font-family:var(--mono);font-size:11px">${e.message}</div></div>`;
@@ -1258,6 +1329,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
   const t=loadTok();if(t){document.getElementById('tok').value=t;const h=Math.max(0,Math.round(((+localStorage.getItem(TE)||0)-Date.now())/36e5));document.getElementById('th-tok').textContent=`Token cached ~${h}h`;document.getElementById('th-tok').className='th ok';}
   const ak=sessionStorage.getItem('tc4s_aikey');if(ak)document.getElementById('ai-key').value=ak;
   await loadRules();
+  if(getTok()) loadMilestones();
 });
 </script>
 </body>

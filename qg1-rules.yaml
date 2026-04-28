@@ -1,23 +1,26 @@
 # TC4S Review Rules – Quality Gate 1 (Issues)
-# Source: TC4S-Profile_Governance___Review-Rules_Consol_v0_1.xlsx
-# Version: 2026-03-30
+# Source: 2026-04-20_TC4S-Profile_and_Review-Rules_v0_3.xlsx, sheet "2. Review-Rules (QG1)"
+# Version: 2026-04-20
 #
 # Fields:
 #   enabled:    true/false — toggle rule on/off without deleting
 #   ai_check:   true = semantic AI analysis available for this rule
 #   ai_prompt:  Prompt fragment sent to the AI for semantic analysis
+#   relevance:  Relevance to QG1 acceptance ("Very high", "High", "Middle", "Low") — Excel column G
+#   status:     Lifecycle status from the Excel ("Active" 🟢 / "Recommendation" 🟡 / "Conflict" 🟠 / "To be discussed" 🔴)
 
 meta:
   gate: QG1
   artifact: GitHub Issue
-  version: "2026-03-30"
+  version: "2026-04-20"
+  source_workbook: "2026-04-20_TC4S-Profile_and_Review-Rules_v0_3.xlsx"
 
 rules:
 
   - id: QG1-01
-    title: Management Summary present and substantively filled
+    title: Management Summary present and meaningfully completed
     status: Active
-    criticality: High
+    relevance: High
     applies_to: [SR, CR]
     enabled: true
     ai_check: true
@@ -28,43 +31,53 @@ rules:
       (3) Does it identify a real coordination problem between independent parties?
       Be specific — quote the relevant phrase if passing, or name what is missing if failing.
       Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
-    check: Issue body must contain a Management Summary section with substantive prose (>=30 words, no TBD/TODO).
+    check: >
+      Issue body must contain a Management Summary section with a clear summary of the proposal that
+      allows an initial assessment of its suitability for standardization (>=30 words, no TBD/TODO).
     fail_if:
       - Management Summary section absent
       - Section body < 30 words
       - Contains TBD / TODO / placeholder
-    source: "CW37-2025 · Active"
+    source: "CW37-2025 (10.09.2025, decision, TC4S Weekly Meeting) · 🟢 Active"
 
   - id: QG1-02
-    title: Domain Manager approval label; >=3 supporting companies
+    title: Domain Manager approval label; supported by ≥3 member companies
     status: Active
-    criticality: Very high
+    relevance: Very high
     applies_to: [SR, CR]
     enabled: true
     ai_check: false
-    check: Issue must carry domain-manager-approved label. Body must list >=3 distinct member companies.
+    check: >
+      Issue must carry the domain-manager-approved label. The Domain Manager confirms the request originates
+      from the responsible Expert Group/Committee and is supported by at least three member companies of the
+      responsible Expert Group.
     fail_if:
       - domain-manager-approved label not set
-      - Fewer than 3 company names identifiable
-    source: "CW48-2025 · Active"
+      - Fewer than 3 supporting member companies identifiable
+    source: >
+      CW48-2025 (26.11.2025, decision, TC4S Weekly Meeting) · 🟢 Active +
+      PR Template (decision, GitHub PR template)
 
   - id: QG1-03
-    title: All mandatory artifacts referenced (model + changelog)
+    title: Formal completeness of all mandatory artifacts (data model in SAM, changelog, all artifacts)
     status: Active
-    criticality: Very high
+    relevance: Very high
     applies_to: [SR, CR]
     enabled: true
     ai_check: false
-    check: Issue must reference an aspect model (SAM/SLDT) and a changelog.
+    check: >
+      Before QG1 approval, all required artifacts must be at least referenced in the Issue as part of the plan
+      (data model in SAM/SLDT, changelog, all artifacts).
     fail_if:
       - No SAM / SLDT / aspect model reference
       - No changelog reference
-    source: "TC4S Workshop Sep 2025 · Active"
+      - Other mandatory artifact references missing
+    source: "20250915_TC4S_Workshop_Sep25_Protokoll.docx (15.09.2025, decision, TC4S Workshop) · 🟢 Active"
 
   - id: QG1-04
-    title: SR contains solid description with objectives and scope
+    title: SR contains solid description with objectives, scope, and boundaries
     status: Recommendation
-    criticality: High
+    relevance: High
     applies_to: [SR]
     enabled: true
     ai_check: true
@@ -74,16 +87,20 @@ rules:
       (3) Are boundaries identifiable? (4) Is this a mature proposal or just a concept note?
       Be specific — quote the relevant phrase if passing, or name what is missing if failing.
       Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
-    check: Body must clearly identify objectives, scope, and boundaries. Min ~200 words for SR.
+    check: >
+      A simple concept note or empty Issue is insufficient. Objectives, scope, and boundaries must be clearly
+      identifiable in the Issue body (rule of thumb: ~200+ words for an SR).
     fail_if:
       - Body < 200 words
       - No scope or objective statement found
-    source: "CW10-2026 · Recommendation"
+    source: >
+      CW10-2026 (04.03.2026, recommendation, TC4S Weekly Meeting) +
+      CW31-2025 (30.07.2025, recommendation, TC4S Weekly Meeting) · 🟡 Recommendation
 
   - id: QG1-05
     title: Scope overlap with existing standards verified
     status: Recommendation
-    criticality: Very high
+    relevance: Very high
     applies_to: [SR]
     enabled: true
     ai_check: true
@@ -93,15 +110,17 @@ rules:
       with differentiation? (3) Does the described scope appear to overlap with known CX standards?
       Be specific — quote the relevant phrase if passing, or name what is missing if failing.
       Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
-    check: Overlap check with existing CX standards must be documented.
+    check: >
+      Before approving a new SR, it must be checked whether the content is already addressed by existing
+      Catena-X standards. The overlap check must be documented in the Issue.
     fail_if:
       - No overlap check documented
-    source: "CW45-2025 · Recommendation"
+    source: "CW45-2025 (05.11.2025, recommendation, TC4S Weekly Meeting) · 🟡 Recommendation"
 
   - id: QG1-06
     title: No feature-level standardization
     status: Recommendation
-    criticality: High
+    relevance: High
     applies_to: [SR]
     enabled: true
     ai_check: true
@@ -110,30 +129,42 @@ rules:
       Assess: (1) Does it require two independent parties to coordinate?
       (2) Or does it primarily codify internal implementation detail or a single company preference?
       (3) Could this be solved by bilateral agreement rather than a standard?
+      Note: features that genuinely require interoperability between independent parties are still in scope.
       Be specific — quote the relevant phrase.
       Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
-    check: SR must target cross-company interoperability, not single-vendor features.
+    check: >
+      An SR must not standardize a single feature implementation. Catena-X standards aim at interoperability
+      between independent parties.
     fail_if:
       - No interoperability context found
       - Only one company use case described
-    source: "CW23-2025 · Recommendation"
+    source: >
+      CW23-2025 (04.06.2025, recommendation, TC4S Weekly Meeting) +
+      CW21-2025 (21.05.2025, recommendation, TC4S Weekly Meeting) · 🟡 Recommendation
+    tc4s_comment: >
+      Excel comment (J8): "Please define feature. Even a feature, if they require interoperability,
+      are absolute mandatory."
 
   - id: QG1-07
-    title: Deprecation Requests linked for replaced standards
+    title: Deprecation Requests linked for replaced standards on consolidation
     status: Recommendation
-    criticality: Very high
+    relevance: Very high
     applies_to: [SR]
     enabled: true
     ai_check: false
-    check: Consolidation or replacement must link Deprecation Request Issues for each replaced standard.
+    check: >
+      When consolidating standards (e.g. merging several PURIS standards into one), in addition to the
+      consolidated SR a Deprecation Request Issue must exist for each replaced standard.
     fail_if:
       - Consolidation described but no Deprecation Request linked
-    source: "CW45-2025 · Recommendation"
+    source: >
+      CW45-2025 (05.11.2025, recommendation, TC4S Weekly Meeting) +
+      CW48-2025 (26.11.2025, recommendation, TC4S Weekly Meeting) · 🟡 Recommendation
 
   - id: QG1-08
-    title: Change type (Major/Minor/Patch) clearly justified
+    title: Change type (Major / Minor / Patch) clearly justified
     status: Recommendation
-    criticality: Very high
+    relevance: Very high
     applies_to: [CR, Patch]
     enabled: true
     ai_check: true
@@ -143,29 +174,34 @@ rules:
       (2) Does the described change match the stated version type per SemVer?
       (3) Are there signals this could be a breaking change disguised as Minor/Patch
       (e.g. MUST statement changes, data model field removals, API changes)?
+      (4) Is the change type upgraded (e.g. Minor → Major) without sufficient explanation?
       Be specific — quote the relevant phrase.
       Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
-    check: CR must state version change type with clear rationale.
+    check: CR must state version change type with clear rationale. Unjustified upgrades undermine SemVer reliability.
     fail_if:
       - No version change type stated
       - No rationale for version type
-    source: "CW9-2026 · Recommendation"
+      - Change upgraded between Minor/Major without sufficient explanation
+    source: "CW9-2026 (25.02.2026, recommendation, TC4S Weekly Meeting) · 🟡 Recommendation"
 
   - id: QG1-09
-    title: Cross-dependencies with other standards identified
+    title: Cross-dependencies with other standards identified and documented
     status: Recommendation
-    criticality: Very high
+    relevance: Very high
     applies_to: [SR, CR]
     enabled: true
     ai_check: true
     ai_prompt: >
       Analyse the cross-standard dependency documentation in this Issue.
       Assess: (1) Are affected CX standards listed? (2) Is a cascading impact
-      assessment present for each? (3) Are there implicit dependencies not mentioned
-      (shared data models, CX-IDs, shared protocols)? List any CX standard IDs found.
+      assessment present for each (e.g. CX-ID → UID type cascades)? (3) Are there implicit dependencies
+      not mentioned (shared data models, CX-IDs, shared protocols)? List any CX standard IDs found.
       Be specific — quote the relevant phrase if passing, or name what is missing.
       Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
-    check: If SR/CR affects other CX standards, all dependencies must be listed with impact assessment.
+    check: >
+      If SR/CR affects referenced standards, this must be documented in the Issue with cascading impact
+      assessment (e.g. CX-ID → UID).
     fail_if:
       - Multiple CX IDs referenced but no dependency section
-    source: "CW47-2025 · Recommendation"
+      - Cross-cutting type/identifier change without cascade analysis
+    source: "CW47-2025 (19.11.2025, recommendation, TC4S Weekly Meeting) · 🟡 Recommendation"

@@ -1,11 +1,50 @@
 # TC4S Review Rules – Quality Gate 2 (Pull Requests)
-# Source: TC4S-Profile_Governance___Review-Rules_Consol_v0_1.xlsx
-# Version: 2026-03-30
+# Source: 2026-04-20_TC4S-Profile_and_Review-Rules_v0_3.xlsx
+#   - sheet "3. Review-Rules (QG2)"             → special_rules + pr_body_rules + artifact_rules
+#   - sheet "4.BackwardComp_Indicative-Check"   → bc_diff_rules
+#   - sheet "5. CAC-Quality-Checks"             → cac_quality_rules
+#   - sheet "6. Change-Classification"          → change_classification_rules (NEW in v0.3)
+# Version: 2026-04-20
+#
+# Fields:
+#   enabled:     true/false — toggle rule on/off without deleting
+#   ai_check:    true = semantic AI analysis available for this rule
+#   ai_prompt:   Prompt fragment sent to the AI for semantic analysis
+#   criticality: From the Excel Criticality column ("Very high", "High", "Middle", "Low")
+#   status:      Lifecycle status from the Excel ("Active" 🟢 / "Recommendation" 🟡 / "Conflict - under review" 🟠 / "To be discussed" 🔴)
 
 meta:
   gate: QG2
   artifact: GitHub Pull Request + file diffs
-  version: "2026-03-30"
+  version: "2026-04-20"
+  source_workbook: "2026-04-20_TC4S-Profile_and_Review-Rules_v0_3.xlsx"
+
+# ── SPECIAL RULES (under review / pending TC4S decision) ─────────────────────
+
+special_rules:
+
+  - id: S-01
+    title: References to other Catena-X standards without a version number (proposed)
+    status: To be discussed if abolished
+    criticality: Low
+    applies_to: [all]
+    enabled: false                # disabled by default — directly conflicts with QG2-26 (active rule)
+    ai_check: false
+    check: >
+      Recommendation: use only the standard identifier plus a link to the standard repository
+      (e.g. "in CX-0018 Dataspace Connectivity (see standard library)") instead of versioned references.
+    rationale: >
+      Versioned references are operationally unsustainable and technically not meaningful, because all
+      references are only valid within the same release. CX-0149 was rejected for this reason alone.
+    conflict_with: QG2-26
+    tc4s_comment: >
+      Formal TC4S decision still pending. The 05.02.2024 resolution mandates versioned references
+      (see QG2-26); only TC4S can formally revise that resolution before this rule can be activated.
+    source: >
+      TC4S_Resolutions.docx (05.02.2024, decision, TC4S Resolution) — origin of versioned-reference rule;
+      Email Johann Schütz (20.02.2026, recommendation);
+      Email Daniela Wuensch (19.02.2026, recommendation);
+      Email Jan Seidel (20.02.2026, recommendation) · 🔴 To be discussed if abolished
 
 # ── PR BODY COMPLETENESS ─────────────────────────────────────────────────────
 
@@ -18,11 +57,20 @@ pr_body_rules:
     applies_to: [all]
     enabled: true
     ai_check: false
-    check: Every checkbox in the PR template must be [x] or N/A. Empty boxes are grounds for rejection.
+    check: >
+      Every checkbox in the PR template must be addressed (checked or N/A). Empty checklists are grounds
+      for rejection.
     fail_if:
       - Any unchecked [ ] checkbox in PR body
       - No checkboxes found at all (template missing)
-    source: "CW3-2026 · Active"
+    source: >
+      CW3-2026 (14.01.2026, decision, TC4S Weekly Meeting) +
+      20250915_TC4S_Workshop_Sep25_Protokoll.docx (15.09.2025, decision, TC4S Workshop) +
+      PR Template (decision, GitHub PR template) · 🟢 Active
+    tc4s_comment: >
+      Critical Issue raised in CW6-2026 (14.01.2026): "There is currently no versioning or logging of
+      changes to the checklist or management summary in GitHub. This may lead to quality and auditing
+      issues. A solution needs to be defined by Catena-X."
 
   - id: QG2-02
     title: Management Summary (Sections 1.1-1.5) in full prose
@@ -39,12 +87,20 @@ pr_body_rules:
       Is it written in full prose sentences (not bullet lists)?
       Be specific — quote where sections are thin or missing.
       Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
-    check: PR body must contain Management Summary in full prose covering all five subsections.
+    check: >
+      PR body must contain a Management Summary in full sentences (no bullet list) covering all five
+      subsections: (1.1) Standard ID, version, domain; (1.2) rationale; (1.3) what has changed;
+      (1.4) consequences if not changed; (1.5) compatibility and reference.
     fail_if:
       - Management Summary section missing
       - Any of sections 1.1-1.5 missing or empty
       - Uses bullet lists instead of prose
-    source: "CW2-2026 · Active"
+    source: >
+      CW2-2026 (07.01.2026, decision, TC4S Weekly Meeting) +
+      PR Template Section 1.1–1.5 (decision, GitHub PR template) · 🟢 Active
+    tc4s_comment: >
+      Critical Issue raised in CW6-2026 (14.01.2026): missing versioning/logging of Management Summary
+      changes in GitHub. Same as QG2-01.
 
   - id: QG2-12
     title: Planning Issue linked under Development
@@ -53,10 +109,16 @@ pr_body_rules:
     applies_to: [all]
     enabled: true
     ai_check: false
-    check: At least one GitHub Issue must be linked via the Development section.
+    check: >
+      At least one planning Issue must be linked in the PR under "Development", and relevant data
+      (Management Summary, milestone, metadata) must be transferred to the PR. Merely referencing the
+      Issue is not sufficient — the PR must function as a standalone, reviewable artifact.
     fail_if:
       - No issue reference found (Closes/Fixes/Resolves #NNN)
-    source: "CW2-2026 · Active"
+      - Issue linked but no relevant data transferred to PR body
+    source: >
+      CW2-2026 (07.01.2026, decision, TC4S Weekly Meeting) +
+      PR Template Section 2 (decision, GitHub PR template) · 🟢 Active
 
   - id: QG2-13
     title: Milestone correctly set on PR
@@ -65,10 +127,10 @@ pr_body_rules:
     applies_to: [all]
     enabled: true
     ai_check: false
-    check: PR must have the correct release milestone set.
+    check: PR must have the correct release milestone set; the milestone controls release-process automation.
     fail_if:
       - No milestone set on PR
-    source: "CW2-2026 · Active"
+    source: "CW2-2026 (07.01.2026, decision, TC4S Weekly Meeting) · 🟢 Active"
 
 # ── ARTIFACT COMPLETENESS ────────────────────────────────────────────────────
 
@@ -81,25 +143,35 @@ artifact_rules:
     applies_to: [all]
     enabled: true
     ai_check: false
-    check: CHANGELOG.md must be in changed files with a [X.Y.Z] entry listing Added/Changed/Removed.
+    check: >
+      CHANGELOG.md must exist, be in changed files, and list all changes, additions, and deletions with
+      a versioned [X.Y.Z] entry. The "WHAT CHANGED COMPARED TO THE LAST VERSION" section now lives in
+      Changelog.md per the PR template.
     fail_if:
       - No CHANGELOG.md in changed files
       - No versioned [X.Y.Z] entry found
       - Only "minor updates" or vague descriptions
-    source: "CW22-2025 · Active"
+    source: >
+      CW22-2025 (28.05.2025, decision, TC4S Weekly Meeting) +
+      20250915_TC4S_Workshop_Sep25_Protokoll.docx (15.09.2025, decision, TC4S Workshop) +
+      PR Template Section 4.1 (decision, GitHub PR template) · 🟢 Active
 
   - id: QG2-04
-    title: Semantic versioning correctly applied
+    title: Semantic versioning correctly applied (MAJOR.MINOR.PATCH)
     status: Active
     criticality: High
     applies_to: [all]
     enabled: true
     ai_check: false
-    check: Version must follow MAJOR.MINOR.PATCH. Major=breaking, Minor=compatible addition, Patch=fix.
+    check: >
+      Version must follow MAJOR.MINOR.PATCH per SemVer. Major = breaking; Minor = backward-compatible
+      extension; Patch = bug fix. Version increment must match the type of change.
     fail_if:
       - No version change pattern found in PR body
       - Version increment does not match change type
-    source: "CW5-2026 · Active"
+    source: >
+      CW5-2026 (28.01.2026, recommendation, TC4S Weekly Meeting) +
+      PR Template Section 4.1 (decision, GitHub PR template) · 🟢 Active
 
   - id: QG2-05
     title: Aspect model links present, functional, and in status released
@@ -108,11 +180,16 @@ artifact_rules:
     applies_to: [all]
     enabled: true
     ai_check: false
-    check: All aspect models must be linked, published in eclipse-tractusx/sldt-semantic-models, in state released.
+    check: >
+      All aspect models must be linked, functional, and published in the Eclipse Tractus-X
+      sldt-semantic-models repository in state "released". Missing links are a blocker for approval.
     fail_if:
       - Model files changed but no SLDT link
       - Link found but released status not confirmed
-    source: "CW4-2026 · Active"
+    source: >
+      CW4-2026 (21.01.2026, decision, TC4S Weekly Meeting) +
+      20250915_TC4S_Workshop_Sep25_Protokoll.docx (15.09.2025, decision, TC4S Workshop) +
+      PR Template Section 5 (decision, GitHub PR template) · 🟢 Active
 
   - id: QG2-06
     title: OpenAPI file in /assets folder where APIs defined
@@ -121,10 +198,30 @@ artifact_rules:
     applies_to: [if_api]
     enabled: true
     ai_check: false
-    check: For every API in the standard, an OpenAPI file must be in ./assets/.
+    check: >
+      For every API in the standard, an OpenAPI file must be available in ./assets/. Machine-readable
+      API specifications enable automated validation.
     fail_if:
       - API content detected but no openapi.yaml in ./assets/
-    source: "CW22-2025 · Active"
+    source: >
+      CW22-2025 (28.05.2025, decision, TC4S Weekly Meeting) +
+      PR Template Section 4.1 (decision, GitHub PR template) · 🟢 Active
+
+  - id: QG2-07
+    title: Industry Core Standards used as basis for new Use Cases
+    status: Active
+    criticality: High
+    applies_to: [use_case]
+    enabled: true
+    ai_check: false
+    check: >
+      New Use Case standards must build on Industry Core Standards (CX-0126, CX-0127, CX-0151) where
+      relevant. Standards without this basis risk incompatibilities.
+    fail_if:
+      - New Use Case standard with no reference to Industry Core (CX-0126/CX-0127/CX-0151)
+    source: >
+      CW22-2025 (28.05.2025, decision, TC4S Weekly Meeting) +
+      PR Template Section 6 (decision, GitHub PR template) · 🟢 Active
 
   - id: QG2-08
     title: Backward compatibility explicitly confirmed in Section 1.5
@@ -138,14 +235,21 @@ artifact_rules:
       Assess: (1) Is a BC statement present? (2) Is it substantive — does it explain
       HOW compatibility is maintained or WHY it is not applicable?
       (3) Is "Not applicable – new standard" used appropriately or as an excuse?
-      (4) Has the committee/expert group explicitly confirmed the BC assessment?
+      (4) Has the requesting committee/expert group explicitly confirmed the BC assessment?
       Be specific — quote the relevant phrase.
       Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
-    check: PR Section 1.5 must contain an explicit BC statement confirmed by Committee/EG.
+    check: >
+      PR Section 1.5 must contain a backward-compatibility statement explicitly confirmed by the
+      requesting Committee and Expert Group. Existing implementations must not be broken without a
+      migration path.
     fail_if:
       - No BC statement in Section 1.5
-      - No committee confirmation
-    source: "PR template Section 1.5 · Active"
+      - No committee/expert-group confirmation
+    source: >
+      PR Template Section 1.5 (decision, GitHub PR template) +
+      PR Template Section 4.1 (decision, GitHub PR template) +
+      20250915_TC4S_Workshop_Sep25_Protokoll.docx (15.09.2025, decision, TC4S Workshop) +
+      CW7-2026 (11.02.2026, recommendation — AMC lead not formally adopted) · 🟢 Active
 
   - id: QG2-09
     title: CAC section present and objectively verifiable
@@ -156,22 +260,29 @@ artifact_rules:
     ai_check: true
     ai_prompt: >
       Analyse the Conformity Assessment Criteria (CAC) section of this standard.
-      Assess: (1) Is a CAC section present? (2) Are criteria categorised (API/Semantics/Protocol/Logic)?
+      Assess: (1) Is a CAC section present? (2) Are criteria categorised
+      (API / Semantics / Protocol / Logic-Processing)?
       (3) Is each criterion objectively testable with a clear input/output/pass-fail?
       (4) Is there vague language (should, appropriate, reasonably)?
       (5) Is each CAC backed by at least one MUST statement in the standard?
       Be specific — quote examples of good and problematic criteria.
       Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
-    check: Standard must include CAC section. Criteria must be categorised, testable, backed by MUST statements.
+    check: >
+      Standard must include a Consolidated Conformity Assessment Criteria (CAC) section. Criteria must
+      be categorised into APIs, Semantics, Protocols, and Logic/Processing, applicable in the
+      certification process, and objectively verifiable. Mandatory from R25.12 onward; optional for R25.09.
     fail_if:
       - No CAC section found (mandatory from R25.12)
       - Criteria not categorised
       - Vague language in criteria
       - CAC items not backed by MUST statements
-    source: "PR template Section 4.1, CW7-2026 · Active from R25.12"
+    source: >
+      PR Template Section 4.1 (decision, GitHub PR template) +
+      CW7-2026 (11.02.2026, recommendation, TC4S Weekly Meeting) +
+      CW50-2025 (10.12.2025, recommendation, TC4S Weekly Meeting) · 🟢 Active (from R25.12)
 
   - id: QG2-10
-    title: MUST/MAY unambiguous; >=1 MUST present
+    title: MUST/MAY unambiguous; ≥1 MUST present
     status: Recommendation
     criticality: Very high
     applies_to: [all]
@@ -186,44 +297,160 @@ artifact_rules:
       the CAB or Expert Group rather than to the system implementer?
       Be specific — quote examples of correct and incorrect usage.
       Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
-    check: Standard must not consist solely of MAY statements. At least one verifiable MUST required.
+    check: >
+      Standard must not consist solely of MAY statements. MUST requirements must be clearly defined.
+      Without mandatory criteria, conformity cannot be assessed.
     fail_if:
       - No MUST statements in changed standard files
       - MUST addressed to CAB or EG, not system implementer
-    source: "CW50-2025 · Recommendation"
+    source: "CW50-2025 (10.12.2025, recommendation, TC4S Weekly Meeting) · 🟡 Recommendation"
+
+  - id: QG2-11
+    title: Glossary included where needed
+    status: Recommendation
+    criticality: Middle
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse whether this standard requires a glossary and whether one is provided.
+      Assess: (1) Are domain-specific terms used that may be ambiguous to readers
+      outside the immediate Expert Group? (2) Is a glossary section present?
+      (3) Does the title accurately reflect the scope (cf. Material Accounting example
+      where the title suggested a broader scope than was actually covered)?
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: >
+      A glossary section should be included where ambiguous or domain-specific terminology is used.
+      Standards must be clearly understandable.
+    fail_if:
+      - Specialised terms used without definition and no glossary section present
+    source: >
+      CW46-2025 (12.11.2025, recommendation, TC4S Weekly Meeting) +
+      CW4-2026 (21.01.2026, recommendation, TC4S Weekly Meeting) · 🟡 Recommendation
+    tc4s_comment: "Excel comment (J5): 'where is the difference to section 1.5?' — pending clarification."
+
+  - id: QG2-14
+    title: TC4M approval for aspect models, where applicable
+    status: Active
+    criticality: Very high
+    applies_to: [if_aspect_model]
+    enabled: true
+    ai_check: false
+    check: >
+      Where the PR introduces or modifies aspect models, TC4M approval must be available. Missing TC4M
+      approval may lead to TC4S rejection of QG2.
+    fail_if:
+      - Aspect model files changed but no TC4M approval evidence (label, comment, linked decision)
+    source: "CW3-2026 (14.01.2026, decision, TC4S Weekly Meeting) · 🟢 Active"
 
   - id: QG2-15
-    title: Standard internally consistent and open
+    title: Standard internally consistent, clearly understandable, and open
     status: Active
     criticality: High
     applies_to: [all]
     enabled: true
     ai_check: true
     ai_prompt: >
-      Analyse this standard for internal consistency.
-      Assess: (1) Are there contradictory statements (same term defined differently
-      in different sections)? (2) Are there proprietary technology lock-ins or product
-      name references in normative text? (3) Are key terms used consistently
-      throughout? Flag specific contradictions or inconsistencies with section references.
+      Analyse this standard for internal consistency and openness.
+      Assess: (1) Are there contradictory statements (e.g. same role/term defined
+      differently in different chapters)? (2) Are there proprietary technology lock-ins
+      or product-name references in normative text? (3) Are key terms used consistently?
+      Flag specific contradictions or inconsistencies with section references.
       Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
-    check: No contradictory statements. No proprietary lock-in. Consistent terminology.
+    check: >
+      No contradictory statements, clearly phrased, no proprietary lock-ins. Consistent terminology
+      across the document.
     fail_if:
       - Same concept defined differently in different sections
       - Proprietary product recommended normatively
-    source: "TC4S Profile 2024/2025 · Active"
+    source: >
+      "Catena-X_TC4S Profile_2024.pdf" (03.03.2025, decision, TC4S profile / mandate) +
+      "2025_Catena-X_TC4S Profile.pdf" (21.05.2025, decision, TC4S profile / mandate) · 🟢 Active
+
+  - id: QG2-16
+    title: Cross-standard dependencies checked at PR level
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse whether dependencies on other Catena-X standards are documented and consistent at PR level.
+      Assess: (1) Are referenced CX standards reachable and existing? (2) Are there contradictions
+      between this standard and the referenced ones? (3) Has the substantive impact on referenced
+      standards been evaluated (complement to QG1-09)?
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: >
+      Referenced standards must exist and must not contradict the current standard. Complements QG1-09
+      by adding substantive verification at PR level.
+    fail_if:
+      - Referenced CX standard does not exist
+      - Contradiction between this standard and a referenced one
+    source: "20250915_TC4S_Workshop_Sep25_Protokoll.docx (15.09.2025, decision, TC4S Workshop) · 🟢 Active"
+
+  - id: QG2-17
+    title: Legal compliance (antitrust, IP)
+    status: Active
+    criticality: Very high
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse this standard for compliance with antitrust law and IP rules.
+      Flag any of: price fixing/coordination signals, market allocation language,
+      exclusion of specific competitors, or use of proprietary IP without proper
+      licensing/attribution. Be conservative — flag for human review when uncertain.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: >
+      The standard must comply with all requirements, laws, and rules relating to antitrust law and
+      IP regulations. Fundamental compliance requirement anchored in the Operating Model.
+    fail_if:
+      - Antitrust-sensitive content detected
+      - IP infringement risk detected
+    source: >
+      "Catena-X_TC4S Profile_2024.pdf" (03.03.2025, decision, TC4S profile / mandate) +
+      20250915_TC4S_Workshop_Sep25_Protokoll.docx (15.09.2025, decision, TC4S Workshop) · 🟢 Active
+
+  - id: QG2-18
+    title: All referenced taxonomies exist
+    status: Active
+    criticality: Middle
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: Every taxonomy referenced in the standard must be reachable and exist (no unpublished or deleted taxonomies).
+    fail_if:
+      - Reference to an unpublished or deleted taxonomy
+    source: "PR Template Section 4.1 (decision, GitHub PR template) · 🟢 Active"
 
   - id: QG2-19
-    title: Images in ./assets/ folder; SVG or >=300 dpi
+    title: Images in ./assets/ folder; SVG or ≥300 dpi
     status: Active
     criticality: Low
     applies_to: [all]
     enabled: true
     ai_check: false
-    check: All images must be in ./assets/. SVG preferred; rasters >=300 dpi. No inline Base64.
+    check: >
+      All images must be stored in ./assets/. SVG preferred; raster images must be ≥300 dpi.
+      Inline Base64 images and resolutions <100 dpi are not acceptable.
     fail_if:
       - Image files outside ./assets/
       - Inline Base64 images in Markdown
-    source: "PR template Section 4.2 · Active"
+      - Raster image below 300 dpi (or below 100 dpi as hard fail)
+    source: "PR Template Section 4.2 (decision, GitHub PR template) · 🟢 Active"
+
+  - id: QG2-20
+    title: References up to date — no broken links
+    status: Active
+    criticality: Middle
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: All hyperlinks in the standard must be reachable.
+    fail_if:
+      - Broken link to an external resource
+      - Broken link to a deleted GitHub repository or asset
+    source: "PR Template Section 4.2 (decision, GitHub PR template) · 🟢 Active"
 
   - id: QG2-21
     title: No HTML within Markdown files
@@ -232,10 +459,10 @@ artifact_rules:
     applies_to: [all]
     enabled: true
     ai_check: false
-    check: Standard documents must use plain Markdown only. No HTML tags.
+    check: Standard documents must use plain Markdown only — no HTML tags such as <table>, <div>, <br>.
     fail_if:
       - HTML tags found in .md files
-    source: "PR template Section 4.2 · Active"
+    source: "PR Template Section 4.2 (decision, GitHub PR template) · 🟢 Active"
 
   - id: QG2-22
     title: Asset files use kebab-case naming
@@ -244,17 +471,135 @@ artifact_rules:
     applies_to: [all]
     enabled: true
     ai_check: false
-    check: All asset files must use lowercase-hyphenated naming.
+    check: >
+      All asset files must use kebab-case (lowercase words separated by hyphens), e.g.
+      cx-aspect-model-r25-09.
     fail_if:
       - Asset file names contain uppercase or underscores
-    source: "PR template Section 4.2 · Active"
+    source: "PR Template Section 4.2 (decision, GitHub PR template) · 🟢 Active"
+
+  - id: QG2-23
+    title: Use Cases — required Credentials and Policies provided and published in ODRL
+    status: Active
+    criticality: High
+    applies_to: [use_case]
+    enabled: true
+    ai_check: false
+    check: >
+      For Use Case standards, required Credentials and Policies (e.g., Usage Policies) must be provided
+      and published in the ODRL repository. The requester prepares the content; publication is executed
+      by the Legal Expert Group.
+    fail_if:
+      - Use Case standard with no Credentials/Policies provided
+      - Use Case without published Usage Policy in ODRL repository
+    source: "PR Template Section 5 (decision, GitHub PR template) · 🟢 Active"
+
+  - id: QG2-24
+    title: Normative references aligned with certification scope
+    status: Active
+    criticality: Very high
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse the normative-references section of this standard.
+      Assess: (1) Are all listed normative references actually relevant for certification of the
+      respective scope? (2) Are non-certification references correctly placed under "Non-normative
+      references"? (3) Is the Modular System used to verify the referencing?
+      Listing standards under normative references falsely indicates the need to certify them.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: >
+      Normative references must be in accordance with the need of certification of respective standards.
+      References to standards that do not need to be certified within the respective scope must be
+      placed under "Non-normative references". Verification of normative references via the Modular
+      System is mandatory within QG2.
+    fail_if:
+      - Non-certification standard listed under "Normative references"
+      - Modular System verification missing for normative references
+    source: "TC4S_Resolutions.docx (29.10.2024, decision, TC4S Resolution) · 🟢 Active"
+
+  - id: QG2-25
+    title: Standards template does not contain "List of standalone standards" (former chapter 2.1.1)
+    status: Active
+    criticality: Middle
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      Chapter 2.1.1 "List of standalone standards" was deleted from the standards template. Normative
+      references must instead be aligned with the Modular System; partial referencing and partial
+      certification of standards must be supported.
+    fail_if:
+      - Standard still contains chapter 2.1.1 "List of standalone standards"
+    source: "TC4S_Resolutions.docx (15.10.2024, decision, TC4S Resolution) · 🟢 Active"
+
+  - id: QG2-26
+    title: References to other Catena-X standards use specific version references
+    status: Conflict - under review
+    criticality: Middle
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      References to other Catena-X standards must use specific version references
+      (e.g., "in accordance with CX-0018 V0.1.1 Dataspace Connectivity"). Applies to internal Catena-X
+      standards and to external documents sourced from outside the organization. Authors receive
+      guidance on updating references when new versions are released.
+    fail_if:
+      - Reference to a CX standard without version number (e.g., "in accordance with CX-0018 Dataspace Connectivity")
+    conflict_with: S-01
+    tc4s_comment: >
+      ⚠️ Potential conflict with S-01 (proposal to abolish versioned references). Formal TC4S decision
+      required before changing the 05.02.2024 rule.
+    source: "TC4S_Resolutions.docx (05.02.2024, decision, TC4S Resolution) · 🟠 Conflict - under review"
+
+  - id: QG2-27
+    title: API minimum major version 1.0.0 for standardization candidates
+    status: Active
+    criticality: High
+    applies_to: [if_api]
+    enabled: true
+    ai_check: false
+    check: >
+      All API documents submitted as standardization candidates must have a minimum major version of
+      1.0.0. v0.x.y candidates are not acceptable. Guidance for issuing a major API version:
+      Functionality (core functionality aligned with intended purpose), Stability (stable API with
+      minimal risk of breaking changes; thoroughly tested), Documentation (basic documentation covering
+      endpoints, parameters, responses, error codes, usage examples), Versioning scheme (well-defined
+      scheme with major/minor/patch; v1.0.0 = initial stable release).
+    fail_if:
+      - API submitted as standardization candidate with version <1.0.0
+    source: "TC4S_Resolutions.docx (05.02.2024, decision, TC4S Resolution) · 🟢 Active"
+
+  - id: QG2-28
+    title: CX-0008 certification options and periods correctly referenced
+    status: Active
+    criticality: High
+    applies_to: [if_cx_0008_referenced]
+    enabled: true
+    ai_check: false
+    check: >
+      CX-0008 "Relevant Standards for Conformity Assessments" must reference the approved certification
+      options and periods. Mandatory certification: ISO 9001 (Quality Management) OR ISO 27001
+      (Information Security) OR TISAX (Information Security); others may be recommended. Initial
+      certification period: 24 months. Re-certification period: 12 months.
+    fail_if:
+      - CX-0008 referenced with outdated certification options (e.g., only ISO 9001 mandatory)
+      - Initial certification period stated as something other than 24 months
+      - Re-certification period stated as something other than 12 months
+    source: "TC4S_Resolutions.docx (17.10.2023, decision, TC4S Resolution) · 🟢 Active"
 
 # ── BACKWARD COMPATIBILITY (DIFF-LEVEL) ─────────────────────────────────────
+# Mapped from sheet "4.BackwardComp_Indicative-Check" (12 indicative criteria).
+# Runtime IDs (BC-PR-*) are kept for engine compatibility; new indicators added as
+# BC-PR-06 .. BC-PR-12.
 
 bc_diff_rules:
 
   - id: BC-PR-01
-    title: MUST-statement changed in diff
+    title: MUST-Statement changed, removed, or added in diff
+    bc_indicator_ref: 1
+    breaking_indicator: "🔴 High"
     status: Active
     criticality: Very high
     applies_to: [all]
@@ -268,12 +613,16 @@ bc_diff_rules:
       (4) Is the change justified by the stated version type?
       Be specific — quote the before/after text of each changed MUST.
       Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
-    check: MUST/SHALL changes in diff are breaking by default. BC concept required.
+    check: >
+      MUST/SHALL statements are normatively binding and form the basis for certification and
+      implementation. Any change is breaking by default. BC concept required.
     consequence: BC concept required; MAJOR release only
-    source: "BackwardComp sheet · BC-PR-01 · HIGH"
+    source: "BackwardComp sheet criterion #1 · 🔴 High"
 
   - id: BC-PR-02
-    title: Data model field removed or renamed in diff
+    title: Data model removed, replaced, or substantively changed in diff
+    bc_indicator_ref: 2
+    breaking_indicator: "🔴 High"
     status: Active
     criticality: Very high
     applies_to: [all]
@@ -281,50 +630,192 @@ bc_diff_rules:
     ai_check: true
     ai_prompt: >
       Analyse the data model changes in this diff.
-      For each field removal, rename, or type change found, assess:
-      (1) What field changed and how? (2) Is this breaking for existing
+      For each removal, replacement, field rename, type change, or semantic change found, assess:
+      (1) What field/model changed and how? (2) Is this breaking for existing
       producers/consumers? (3) Is the change justified?
       Be specific — quote the affected field names and file paths.
       Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
-    check: Field removals/renames in model files are breaking changes. BC concept required.
+    check: >
+      Data models define the structure of data exchange. Removal, replacement, or modification of
+      fields, field types, or semantics breaks existing implementations. BC concept required.
     consequence: BC concept required; MAJOR release only
-    source: "BackwardComp sheet · BC-PR-02 · HIGH"
+    source: "BackwardComp sheet criterion #2 · 🔴 High"
 
   - id: BC-PR-03
-    title: API endpoint or operationId changed in diff
+    title: API endpoint, operationId, or protocol identifier changed in diff
+    bc_indicator_ref: 3
+    breaking_indicator: "🔴 High"
     status: Active
     criticality: Very high
     applies_to: [all]
     enabled: true
     ai_check: false
-    check: API path or operationId changes in OpenAPI files are breaking.
+    check: >
+      API path, operationId, or protocol identifier changes (e.g., HTTPS → HTTP, version string "08"
+      vs "v08") are breaking — they cause existing implementations to fail.
     consequence: BC concept required; MAJOR release only
-    source: "BackwardComp sheet · BC-PR-03 · HIGH"
+    source: "BackwardComp sheet criterion #3 · 🔴 High"
 
   - id: BC-PR-04
-    title: Field cardinality changed (required <-> optional)
+    title: Field cardinality changed (Required ↔ Optional)
+    bc_indicator_ref: 4
+    breaking_indicator: "🔴 High"
     status: Active
     criticality: Very high
     applies_to: [all]
     enabled: true
     ai_check: false
-    check: Cardinality changes in model files are breaking changes.
+    check: >
+      Cardinality changes are breaking. If a mandatory field becomes optional, a newer provider may
+      omit it but an older consumer expects it and fails. Conversely, older implementations do not
+      provide a newly required field.
     consequence: BC concept required; MAJOR release only
-    source: "BackwardComp sheet · BC-PR-04 · HIGH"
+    source: "BackwardComp sheet criterion #4 · 🔴 High"
 
   - id: BC-PR-05
     title: Breaking change in correct release type (MAJOR required)
+    bc_indicator_ref: 5
+    breaking_indicator: "🔴 Procedurally critical"
     status: Active
     criticality: Very high
     applies_to: [all]
     enabled: true
     ai_check: false
-    check: If any HIGH BC indicator triggered and version is MINOR/PATCH, that is a hard blocker.
+    check: >
+      If any 🔴 BC indicator triggered, the change requires a Major Release (e.g. Neptun). Minor
+      Releases (e.g. Titan) cannot carry breaking changes — that is a hard procedural blocker.
     consequence: Hard blocker — version type must be MAJOR
-    source: "BackwardComp sheet · BC-PR-05 · Procedurally critical"
+    source: "BackwardComp sheet criterion #5 · 🔴 Procedurally critical"
 
-# ── CAC QUALITY (from Quality Criteria Catalogue v0.1) ───────────────────────
-# Placeholder section — full standard analysis feature (future)
+  - id: BC-PR-06
+    title: External normative reference version upgraded
+    bc_indicator_ref: 6
+    breaking_indicator: "🟡 Medium"
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse upgrades of referenced external specifications in this diff (e.g., IDTA 3.0 → 3.2,
+      DID Core v1.0 → v1.1, OAuth 2.0 → OAuth 2.1).
+      Assess: (1) Did the referenced version itself contain breaking changes? (2) Does the upgrade
+      transitively affect normative obligations of this standard?
+      Note: SemVer of the referenced spec does NOT automatically guarantee compatibility.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: >
+      Standards frequently reference external specifications. Semantic versioning of the referenced
+      spec does not automatically guarantee compatibility — a transitive review is required.
+    consequence: BC concept required if referenced version is breaking
+    source: "BackwardComp sheet criterion #6 · 🟡 Medium"
+
+  - id: BC-PR-07
+    title: New optional features or data models added
+    bc_indicator_ref: 7
+    breaking_indicator: "🟡 Medium"
+    status: Active
+    criticality: Middle
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      Optional features create interoperability risks: Company A implements model X, Company B
+      implements model Y — both certified, but not compatible with each other. Review the
+      interoperability impact even when the change is technically additive.
+    consequence: Interoperability review recommended
+    source: "BackwardComp sheet criterion #7 · 🟡 Medium"
+
+  - id: BC-PR-08
+    title: Namespace changed or removed
+    bc_indicator_ref: 8
+    breaking_indicator: "🟡 Medium"
+    status: Active
+    criticality: Middle
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      Namespaces define contexts for data structures. If, e.g., DCAT is removed and replaced by the
+      DSP namespace, inconsistencies arise in use-case data exchange. Review carefully.
+    consequence: Interoperability review required
+    source: "BackwardComp sheet criterion #8 · 🟡 Medium"
+
+  - id: BC-PR-09
+    title: Response format or version string changed
+    bc_indicator_ref: 9
+    breaking_indicator: "🟡 Medium"
+    status: Active
+    criticality: Middle
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      Minimal deviations in response formats (e.g. DSP well-known query) cause existing implementations
+      to misinterpret responses. Applications that rely on a specific response shape can break silently.
+    consequence: Interoperability review required
+    source: "BackwardComp sheet criterion #9 · 🟡 Medium"
+
+  - id: BC-PR-10
+    title: Regulatory necessity for the break
+    bc_indicator_ref: 10
+    breaking_indicator: "🟢 Possible exception"
+    status: Active
+    criticality: Middle
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      If an existing data model is not compliant with regulations (e.g., Battery Pass vs. EU
+      regulation), a breaking change may be justified. "Regulation" here means binding law, not
+      industry recommendation.
+    consequence: Documented regulatory justification may permit a Major-release breaking change
+    source: "BackwardComp sheet criterion #10 · 🟢 Possible exception"
+
+  - id: BC-PR-11
+    title: De-normation — normative content moved into a non-normative section
+    bc_indicator_ref: 11
+    breaking_indicator: "🔴 High"
+    status: Active
+    criticality: Very high
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Detect de-normation in the diff: a MUST/SHALL requirement that is moved from a normative section
+      into an informative annex, or relabeled as guidance/example/note.
+      Even if the sentence text is identical, this effectively deletes the requirement and breaks
+      implementations that relied on it. Quote the affected statement and its old/new section.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: >
+      Moving a MUST/SHALL requirement into an informative section effectively deletes the requirement.
+      Existing implementations that relied on it can break silently.
+    consequence: BC concept required; MAJOR release only
+    source: "BackwardComp sheet criterion #11 · 🔴 High"
+
+  - id: BC-PR-12
+    title: Normative reference updated to a newer version of an external/internal standard
+    bc_indicator_ref: 12
+    breaking_indicator: "🔴 High (if breaking) / 🟡 Medium (if non-breaking)"
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Detect normative-reference version bumps in the diff.
+      For each bump, determine whether the referenced version is breaking. Normative references
+      transitively apply requirements to the referencing standard, so a bump to a breaking version
+      shifts the normative surface.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: >
+      Normative references transitively apply the referenced requirements to this standard. A bump to
+      a breaking version of the referenced standard is itself breaking for this standard.
+    consequence: BC concept required if referenced version is breaking
+    source: "BackwardComp sheet criterion #12 · 🔴 High (if breaking) / 🟡 Medium (otherwise)"
+
+# ── CAC QUALITY (full quality criteria from sheet 5) ─────────────────────────
+# Runtime IDs CAC-01..CAC-05 retained for engine compatibility; the full set
+# QC-01..QC-15 from "5. CAC-Quality-Checks" is exposed alongside.
 
 cac_quality_rules:
 
@@ -335,13 +826,13 @@ cac_quality_rules:
     applies_to: [all]
     enabled: true
     ai_check: false
-    check: Conformity Assessment section must be present. Mandatory from R25.12.
+    check: Conformity Assessment Criteria section must be present. Mandatory from R25.12.
     fail_if:
       - No CAC section in changed Markdown files
     source: "QG2-09 · Active from R25.12"
 
   - id: CAC-02
-    title: CAC criteria categorised (API/Semantics/Protocol/Logic)
+    title: CAC criteria categorised (API / Semantics / Protocol / Logic)
     status: Active
     criticality: High
     applies_to: [all]
@@ -353,10 +844,10 @@ cac_quality_rules:
       API, Semantics, Protocol, Logic/Processing.
       For each category present, note whether the criteria are truly testable.
       Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
-    check: CAC criteria must be categorised into API, Semantics, Protocol, Logic.
+    check: CAC criteria must be categorised into APIs, Semantics, Protocols, Logic/Processing.
     fail_if:
       - Fewer than 2 categories present
-    source: "CW50-2025 · Active"
+    source: "CW50-2025 (10.12.2025, recommendation, TC4S Weekly Meeting) · Active"
 
   - id: CAC-03
     title: No vague language in CAC criteria
@@ -375,10 +866,10 @@ cac_quality_rules:
     check: CAC criteria must be objectively testable. No vague terms.
     fail_if:
       - Vague terms (should, appropriate, reasonably) in CAC section
-    source: "CW7-2026 (TUV-Sud feedback) · Active"
+    source: "CW7-2026 (TÜV-Süd feedback) · Active"
 
   - id: CAC-04
-    title: Each CAC item backed by >=1 MUST statement
+    title: Each CAC item backed by ≥1 MUST statement
     status: Active
     criticality: High
     applies_to: [all]
@@ -403,13 +894,485 @@ cac_quality_rules:
     applies_to: [all]
     enabled: true
     ai_check: false
-    check: CAC section must be complete. No TBD/TODO/placeholder.
+    check: CAC section must be complete — no TBD/TODO/placeholder, no comments left in the standard.
     fail_if:
       - TBD/TODO/placeholder in CAC section
     source: "General completeness rule"
 
-# ── DATA MODEL CHECK (PLACEHOLDER) ──────────────────────────────────────────
-# Full implementation requires access to eclipse-tractusx/sldt-semantic-models
+  # ── Detailed CAC Quality Criteria (from sheet "5. CAC-Quality-Checks") ──
+
+  - id: QC-01
+    title: CAC ID follows pattern CX-XXXX-CAC-YYY with sequential numbering from 001
+    category: Structure & ID
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      Each CAC MUST have a unique ID following the pattern CX-XXXX-CAC-YYY with sequential numbering
+      starting at 001. ✅ CX-0136-CAC-001  ❌ CX-136-CaC-1 or duplicate IDs.
+    fail_if:
+      - CAC ID does not match pattern CX-XXXX-CAC-YYY
+      - Duplicate CAC IDs
+      - Numbering does not start at 001 or is non-sequential
+    source: "Guidance CAC Consolidation, p.2 · 🟢 Active"
+
+  - id: QC-02
+    title: Each CAC contains all mandatory fields
+    category: Completeness
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      Each CAC MUST contain all mandatory fields: Standard, CAC-ID, Role/Capability, Topic, Type,
+      Automisable, Assessment, Requirement.
+    fail_if:
+      - Any mandatory field missing or empty (Topic, Assessment, etc.)
+    source: "Guidance CAC Consolidation, p.1 · 🟢 Active"
+
+  - id: QC-03
+    title: Each CAC formulated as exactly one normative statement (MUST/SHOULD/MAY)
+    category: Format
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse each CAC for atomicity of normative statement.
+      Flag CACs that contain multiple paragraphs, bullet lists, or multiple normative statements
+      compressed into one entry. ✅ "The provider MUST implement…"  ❌ Multiple paragraphs in one CAC.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: Each CAC must be formulated as exactly one normative statement using MUST, SHOULD or MAY.
+    fail_if:
+      - Multiple normative statements bundled in one CAC
+      - Bullet list inside a single CAC entry
+    source: "Guidance CAC Consolidation, p.3 · 🟢 Active"
+
+  - id: QC-04
+    title: Requirement and supporting information strictly separated
+    category: Format
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Detect mixing of normative requirement text with explanations, examples, or context within the
+      same CAC field. The Requirement field must contain only the requirement; explanations belong in
+      separate notes/comments fields.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: Requirement and supporting information MUST be strictly separated.
+    fail_if:
+      - Requirement field mixes normative text with explanations or examples
+    source: "Guidance CAC Consolidation, p.6 · 🟢 Active"
+
+  - id: QC-05
+    title: Each CAC assigned to exactly one topic (APIs / Semantics / Protocols / Logic-Processing)
+    category: Topic Mapping
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      Each CAC MUST be assigned to exactly one of: APIs, Semantics, Protocols, Logic/Processing.
+      ✅ Single clear topic.  ❌ API + Policy + Semantic in one CAC.
+    fail_if:
+      - More than one topic assigned to a single CAC
+      - No topic assigned
+    source: "Guidance CAC Consolidation, p.3 · 🟢 Active"
+
+  - id: QC-06
+    title: Each CAC describes exactly one testable requirement
+    category: Atomicity
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Analyse each CAC for atomicity: does it describe exactly one testable requirement, or does it
+      bundle multiple distinct conditions that would each warrant their own pass/fail outcome?
+      Non-atomic CACs cannot be tested consistently and inflate audit complexity.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: Each CAC must describe exactly one testable requirement.
+    fail_if:
+      - CAC bundles multiple independent test conditions
+    source: "Guidance CAC Consolidation, p.3 · 🟢 Active"
+
+  - id: QC-07
+    title: Each CAC objectively measurable using defined criteria
+    category: Measurability
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Detect non-measurable CACs. ✅ Defined endpoint, schema, threshold.  ❌ "appropriate
+      implementation" or other subjective language.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: Each CAC must be objectively measurable using defined criteria.
+    fail_if:
+      - Subjective language (e.g., "appropriate implementation") in CAC
+    source: "Guidance CAC Consolidation, p.3 · 🟢 Active"
+
+  - id: QC-08
+    title: Each CAC testable through a defined or clearly derivable test method
+    category: Testability
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: Each CAC must be testable. ✅ API call, schema validation.  ❌ No clear way to test.
+    fail_if:
+      - CAC has no defined or clearly derivable test method
+    source: "Guidance CAC Consolidation, p.6 · 🟢 Active"
+
+  - id: QC-09
+    title: Each CAC verifiable through objective evidence
+    category: Evidence
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      Each CAC must allow verification through objective evidence (documents, logs, tests, certificates).
+      ✅ Logs, API response, certificate.  ❌ Self-declaration only.
+    fail_if:
+      - Verification depends solely on self-declaration
+    source: "Guidance CAC Consolidation, p.3 · 🟢 Active"
+
+  - id: QC-10
+    title: CACs not redundant or overlapping
+    category: Consistency
+    status: Active
+    criticality: Middle
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Detect redundancy or overlap between CACs. Multiple CACs describing the same protocol
+      requirement create contradictions and inflate certification effort. Each CAC should have a
+      unique scope.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: CACs must not be redundant or overlapping.
+    fail_if:
+      - Two or more CACs describe the same requirement with overlapping scope
+    source: "Guidance CAC Consolidation, p.1 · 🟢 Active"
+
+  - id: QC-11
+    title: All references clear, accessible, and unambiguous
+    category: References
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: All references in CACs must be clear, accessible, and unambiguous.
+    fail_if:
+      - Broken or vague references in CAC entries
+    source: "Guidance CAC Consolidation, p.4 · 🟢 Active"
+
+  - id: QC-12
+    title: Automisable strictly "Yes" or "No"
+    category: Formal Values
+    status: Active
+    criticality: Middle
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: The "Automisable" field MUST be strictly "Yes" or "No". No "partially" or empty values.
+    fail_if:
+      - Automisable field contains values other than "Yes" or "No"
+    source: "Guidance CAC Consolidation, p.6 · 🟢 Active"
+
+  - id: QC-13
+    title: Each CAC has at least one valid assessment method
+    category: Assessment
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      Each CAC must have at least one valid assessment method assigned (Inspection, Test,
+      Confirmation). Without a defined assessment method, auditing cannot be executed.
+    fail_if:
+      - No assessment method assigned to a CAC
+    source: "Guidance CAC Consolidation, p.6–7 · 🟢 Active"
+
+  - id: QC-14
+    title: Each CAC clearly supports a higher-level requirement of the standard
+    category: Traceability
+    status: Active
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      For each CAC, identify the higher-level standard requirement it supports. CACs exist only to
+      validate standard requirements, not standalone ideas.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: Each CAC must clearly support a higher-level requirement of the standard.
+    fail_if:
+      - CAC has no clear link to a standard objective or requirement
+    source: "Guidance CAC Consolidation, p.3 · 🟢 Active"
+
+  - id: QC-15
+    title: CAC tables not exceeding necessary scope (~10 CACs per standard unless justified)
+    category: Formal Scope
+    status: Active
+    criticality: Middle
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      CAC tables must not exceed necessary scope — about 10 well-defined criteria per standard,
+      unless justified. Too many CACs increase certification overhead and reduce usability.
+    fail_if:
+      - CAC count >>10 with no justification documented
+    source: "Guidance CAC Consolidation, p.1 · 🟢 Active"
+
+# ── CHANGE CLASSIFICATION (NEW in v0.3, sheet 6) ─────────────────────────────
+# Decision basis for routing changes between Review+Opt-Out and Patch-Track.
+
+change_classification_rules:
+
+  - id: CC-01
+    title: Normative-section changes default to Review + Opt-Out
+    category: Governing Principle
+    status: Recommendation
+    criticality: Very high
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      Any change touching a section marked as normative defaults to Review + Opt-Out. The Patch-Track
+      is an exception that must be actively justified per CC-07 (six closed criteria).
+    fail_if:
+      - Normative-section change routed to Patch-Track without all CC-07 criteria satisfied
+    tc4s_comment: "Pending formal TC4S decision."
+    source: "Derived from QG1-08 (justification of change type) and QG2-04 (correct semantic versioning) · 🟡 Recommendation"
+
+  - id: CC-02
+    title: Six-dimension change classification
+    category: Dimension
+    status: Recommendation
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Classify the change along all six orthogonal dimensions:
+      (A) Section type — normative / non-normative
+      (B) Nature of change — editorial / substantive / structural
+      (C) Compatibility impact — backward-compatible / backward-breaking
+      (D) Network effect (interoperability surface)
+      (E) Reference type (internal / external; normative / informative)
+      (F) Lifecycle phase (development / opt-out / grace period)
+      Respond as JSON with the six dimensions and a short justification per dimension.
+    check: >
+      Every change must be classified along six orthogonal dimensions. Conflating these dimensions is
+      the root cause of most misclassifications: a small textual diff can still be substantive, and a
+      large textual diff can still be editorial.
+    fail_if:
+      - Change presented without explicit classification on all six dimensions
+    source: "Catena-X Life Cycle Management (Operating Model) + SemVer 2.0.0 · 🟡 Recommendation"
+
+  - id: CC-03
+    title: Editorial-change taxonomy (ED-1 … ED-6)
+    category: Taxonomy
+    status: Recommendation
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      Editorial changes (ED-1 … ED-6) are redactional corrections that demonstrably preserve meaning:
+      spelling, punctuation, grammar without meaning impact, clause reordering with meaning preserved,
+      broken-link repair, etc. Anything not explicitly listed is NOT editorial.
+    fail_if:
+      - Change labelled "editorial" but does not match any ED-1…ED-6 pattern
+    source: "Working taxonomy developed for GRNW companion artefacts · 🟡 Recommendation"
+
+  - id: CC-04
+    title: Substantive-change taxonomy (SU-1 … SU-9)
+    category: Taxonomy
+    status: Recommendation
+    criticality: Very high
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Detect substantive changes in the diff: normative keyword change (e.g. SHOULD → MUST),
+      condition/scope change, data model field added/removed/renamed, MUST requirement deleted, etc.
+      All substantive changes in normative sections are subject to Review + Opt-Out.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: >
+      Substantive changes (SU-1 … SU-9) shift meaning, scope, or interpretation: normative keyword
+      change, condition/scope change, data model change, etc. Substantive changes in normative
+      sections always go through Review + Opt-Out.
+    fail_if:
+      - Substantive change routed to Patch-Track
+    source: "Working taxonomy developed for GRNW companion artefacts · 🟡 Recommendation"
+
+  - id: CC-05
+    title: Structural-change taxonomy (ST-1 … ST-5); ST-2 always substantive
+    category: Taxonomy
+    status: Recommendation
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      Structural changes (ST-1 … ST-5) alter document organisation. ST-2 (content moved across the
+      normative / non-normative boundary) is ALWAYS substantive even if the sentence text is identical,
+      because the scope of applicability changes. See cross-reference BC-PR-11 (de-normation).
+    fail_if:
+      - ST-2 (cross-boundary move) classified as editorial
+    source: "Cross-reference: BackwardComp criterion #11 (de-normation) · 🟡 Recommendation"
+
+  - id: CC-06
+    title: Dependency / reference-change classification (DR-1, DR-2, DR-3)
+    category: Taxonomy
+    status: Recommendation
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      Dependency/reference changes: DR-1 (external normative reference bump) and DR-2 (internal
+      CX-standard major bump) are substantive; DR-3 (informative reference) is not. Normative
+      references transitively apply requirements — a bump shifts the normative surface.
+    fail_if:
+      - DR-1 or DR-2 classified as editorial
+    source: "Cross-reference: BackwardComp criterion #12 (reference bump) · 🟡 Recommendation"
+
+  - id: CC-07
+    title: Patch-Track exception — six closed criteria all required
+    category: Patch-Track Exception
+    status: Recommendation
+    criticality: Very high
+    applies_to: [all]
+    enabled: true
+    ai_check: true
+    ai_prompt: >
+      Determine whether ALL six Patch-Track criteria hold for this change:
+      (1) change codes ⊆ {ED-1…ED-6, ST-1, ST-5};
+      (2) no RFC-2119 keyword added/removed/changed;
+      (3) no data model / schema change;
+      (4) no API or protocol identifier change;
+      (5) no normative reference bump;
+      (6) no normative ↔ non-normative move (i.e. no ST-2).
+      A single failed criterion disqualifies the Patch-Track. Burden of proof lies with the change author.
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+    check: >
+      A change qualifies for the Patch-Track only if ALL six criteria hold. One failed criterion
+      disqualifies the Patch-Track. Closed list intended to be used as both a human checklist and a
+      machine-readable gate.
+    fail_if:
+      - Any of the six criteria fails but Patch-Track is still claimed
+    tc4s_comment: "Burden of proof lies with the change author."
+    source: "Operationalises QG2-04 · 🟡 Recommendation"
+
+  - id: CC-08
+    title: Process-track routing derived from SemVer level and section type
+    category: Routing
+    status: Recommendation
+    criticality: Very high
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      Process track is derived from SemVer level and section type:
+      Major → always Review + Opt-Out;
+      Minor in normative section → Review + Opt-Out;
+      Minor in non-normative section → Review (no Opt-Out unless CC-12 triggers);
+      Patch → Patch-Track only if CC-07 is satisfied.
+      "Minor" describes SemVer impact, not governance rigour.
+    fail_if:
+      - Minor change in a normative section routed bypassing the Opt-Out phase
+    tc4s_comment: "Distinguishes SemVer level from process track."
+    source: "Explicit extension of QG2-04 and QG2-08 routing logic · 🟡 Recommendation"
+
+  - id: CC-09
+    title: Backward-compatibility evaluation precedes SemVer assignment
+    category: Routing
+    status: Active
+    criticality: Very high
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      Backward-compatibility evaluation must complete before the SemVer level is assigned. If any
+      criterion in the BackwardComp Indicative-Check (sheet 4) triggers a 🔴 indicator, the change is
+      Major regardless of textual diff size. BC is assessed against artefacts (schemas, APIs, keywords),
+      not against the narrative text.
+    fail_if:
+      - SemVer level assigned before BackwardComp evaluation
+      - 🔴 BC indicator triggered but version is Minor or Patch
+    tc4s_comment: "Existing rule; restated here for completeness of the classification chain."
+    source: "QG2-08 + BackwardComp Indicative-Check · 🟢 Active (existing)"
+
+  - id: CC-10
+    title: Reverse SemVer check — declared bump must match content-required bump
+    category: Reverse Check
+    status: Recommendation
+    criticality: High
+    applies_to: [all]
+    enabled: true
+    ai_check: false
+    check: >
+      The declared SemVer bump is incorrect if any single change requires a higher level under the
+      rule set than the bump actually applied. Patch is voided by any non-editorial change; Minor is
+      voided by any 🔴 BC indicator.
+    fail_if:
+      - Declared bump lower than content-required bump
+    tc4s_comment: "Automation candidate."
+    source: "Validation rule for QG1-08 and QG2-04 · 🟡 Recommendation"
+
+  - id: CC-11
+    title: 'Open Point — define "Opt-Out phase" in TC4S glossary'
+    category: Open Point
+    status: To be discussed
+    criticality: Middle
+    applies_to: [all]
+    enabled: false
+    ai_check: false
+    check: >
+      The TC4S-internal definition of "Opt-Out phase" must be anchored in the glossary and mapped onto
+      the Development Gate / Deployment Gate / Grace Period semantics used in public Release Management
+      documentation. Without a precise definition, CC-08 routing cannot be executed deterministically.
+    open_point: true
+    tc4s_comment: "Governance decision required."
+    source: "Gap identified during classification-framework review; cross-reference Catena-X Operating Model · 🔴 To be discussed"
+
+  - id: CC-12
+    title: 'Open Point — threshold at which non-normative changes effectively reinterpret a normative requirement'
+    category: Open Point
+    status: To be discussed
+    criticality: Middle
+    applies_to: [all]
+    enabled: false
+    ai_check: false
+    check: >
+      TC4S must define the threshold at which a non-normative change (new example, revised guidance)
+      effectively reinterprets a normative requirement and therefore must be routed via Review + Opt-Out.
+      Currently routed at reviewer discretion; a TC4S-defined threshold is required for consistent
+      routing and later automation.
+    open_point: true
+    tc4s_comment: "Governance decision required."
+    source: "Gap identified during classification-framework review · 🔴 To be discussed"
+
+# ── DATA MODEL CHECK (PLACEHOLDER, unchanged) ────────────────────────────────
+# Full implementation requires access to eclipse-tractusx/sldt-semantic-models.
 
 data_model_rules:
 
