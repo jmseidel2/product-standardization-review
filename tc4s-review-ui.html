@@ -316,7 +316,7 @@ table.rt tr:hover td{background:#1e2018}
       </select>
       <label>API Key</label>
       <input type="password" id="ai-key" placeholder="sk-… or API key" oninput="saveAIKey()">
-      <div class="th" id="ai-key-hint">Stored in sessionStorage only. Never committed.</div>
+      <div class="th" id="ai-key-hint">Cached in localStorage for 12h. Never committed.</div>
       <div id="custom-url-row" style="display:none">
         <label>Base URL <span style="color:var(--cx-signal)">*</span></label>
         <input type="text" id="ai-baseurl" placeholder="https://your-blockbrain-endpoint/v1" oninput="saveAIKey()">
@@ -411,17 +411,28 @@ function loadTok(){try{const e=+localStorage.getItem(TE)||0;if(Date.now()>e){loc
 function getTok(){return document.getElementById('tok').value.trim()||loadTok()||'';}
 function onTok(){const t=document.getElementById('tok').value.trim();if(t){saveTok(t);const h=Math.max(0,Math.round(((+localStorage.getItem(TE)||0)-Date.now())/36e5));document.getElementById('th-tok').textContent=`Token cached ~${h}h`;document.getElementById('th-tok').className='th ok';loadMilestones();}}
 
-// ── AI key (sessionStorage only) ─────────────────────────────────────────────
+// ── AI credentials (localStorage with 12h TTL, like the GitHub token) ────────
+const AI_TTL_MS=12*36e5;
+const AI_KEYS={key:'tc4s_aikey',url:'tc4s_aiurl',model:'tc4s_aimodel',exp:'tc4s_aiexp'};
+function _aiAlive(){const e=+localStorage.getItem(AI_KEYS.exp)||0;if(Date.now()>e){Object.values(AI_KEYS).forEach(k=>localStorage.removeItem(k));return false;}return true;}
+function _aiLoad(name){return _aiAlive()?(localStorage.getItem(AI_KEYS[name])||''):'';}
 function saveAIKey(){
   const k=document.getElementById('ai-key').value.trim();
   const u=document.getElementById('ai-baseurl')?.value.trim()||'';
   const m=document.getElementById('ai-model').value.trim();
-  if(k)sessionStorage.setItem('tc4s_aikey',k);
-  if(u)sessionStorage.setItem('tc4s_aiurl',u);
-  if(m)sessionStorage.setItem('tc4s_aimodel',m);
+  if(k||u||m){
+    localStorage.setItem(AI_KEYS.exp,Date.now()+AI_TTL_MS);
+    if(k) localStorage.setItem(AI_KEYS.key,k); else localStorage.removeItem(AI_KEYS.key);
+    if(u) localStorage.setItem(AI_KEYS.url,u); else localStorage.removeItem(AI_KEYS.url);
+    if(m) localStorage.setItem(AI_KEYS.model,m); else localStorage.removeItem(AI_KEYS.model);
+  }
+  // Mirror to sessionStorage too so older tabs in the same session see it
+  if(k)sessionStorage.setItem(AI_KEYS.key,k);
+  if(u)sessionStorage.setItem(AI_KEYS.url,u);
+  if(m)sessionStorage.setItem(AI_KEYS.model,m);
 }
-function getAIKey(){return document.getElementById('ai-key').value.trim()||sessionStorage.getItem('tc4s_aikey')||'';}
-function getAIUrl(){return document.getElementById('ai-baseurl')?.value.trim()||sessionStorage.getItem('tc4s_aiurl')||'';}
+function getAIKey(){return document.getElementById('ai-key').value.trim()||_aiLoad('key')||sessionStorage.getItem(AI_KEYS.key)||'';}
+function getAIUrl(){return document.getElementById('ai-baseurl')?.value.trim()||_aiLoad('url')||sessionStorage.getItem(AI_KEYS.url)||'';}
 function getAIModel(){return document.getElementById('ai-model').value.trim()||'';}
 function getAIProvider(){return document.getElementById('ai-provider').value;}
 function aiEnabled(){return document.getElementById('ai-master').checked&&!!getAIKey();}
@@ -477,9 +488,15 @@ function onModelSelectChange(){
   if(sel.value==='__custom'){input.style.display='block';input.value='';input.focus();}
   else{input.style.display='none';input.value=sel.value;saveAIKey();}
 }
+const PROVIDER_DEFAULT_URL={blockbrain:'https://catena-x.kb.theblockbrain.ai/'};
 function onProviderChange(){
   const p=getAIProvider();
   document.getElementById('custom-url-row').style.display=(p==='blockbrain'||p==='custom')?'block':'none';
+  const urlInput=document.getElementById('ai-baseurl');
+  if((p==='blockbrain'||p==='custom')&&!urlInput.value.trim()&&PROVIDER_DEFAULT_URL[p]){
+    urlInput.value=PROVIDER_DEFAULT_URL[p];
+    saveAIKey();
+  }
   document.getElementById('ai-model').value='';
   populateModelOptions();
 }
@@ -613,11 +630,16 @@ async function callAI(prompt,context,opts={}){
   const messages=[{role:'user',content:`${prompt}\n\nContent to analyse:\n\`\`\`\n${context.slice(0,3000)}\n\`\`\``}];
   const headers={'Content-Type':'application/json','Authorization':`Bearer ${key}`};
   const body=JSON.stringify({model,max_tokens:400,temperature:0.1,messages:[{role:'system',content:systemPrompt},...messages]});
-  const r=await fetch(url,{method:'POST',headers,body});
+  let r;
+  try{r=await fetch(url,{method:'POST',headers,body});}
+  catch(e){
+    const err=new Error(`Network/CORS error reaching ${url}. ${e.message||''}`.trim());
+    err.url=url;throw err;
+  }
   if(!r.ok){
     const txt=await r.text().catch(()=>'');
-    const err=new Error(`HTTP ${r.status}${txt?': '+txt.slice(0,140):''}`);
-    err.status=r.status;
+    const err=new Error(`HTTP ${r.status} from ${url}${txt?' — '+txt.slice(0,120):''}`);
+    err.status=r.status;err.url=url;
     throw err;
   }
   const d=await r.json();
@@ -646,23 +668,15 @@ async function testAI(){
     btn.textContent='✗ Failed';
     btn.style.color='var(--cx-signal)';
     btn.style.borderColor='var(--cx-signal)';
-    status.textContent=e.message||'Connection failed.';
+    const msg=e.message||'Connection failed.';
+    status.innerHTML=`<div style="white-space:pre-wrap;word-break:break-word">${msg.replace(/</g,'&lt;')}</div>`;
     status.className='th';
     status.style.color='var(--cx-signal)';
-    setAIStatus('err',(e.message||'failed').slice(0,40));
+    setAIStatus('err',msg.slice(0,40));
+    console.error('[AI test] failed:',e);
   }finally{
     btn.disabled=false;
   }
-}
-
-async function testAI(){
-  const btn=event.target;btn.textContent='Testing…';btn.disabled=true;
-  try{
-    const r=await callAI('Respond as JSON: {"result":"pass","confidence":1.0,"finding":"AI connection successful"}','test');
-    if(r?.finding){btn.textContent='✓ AI connected';btn.style.color='var(--green)';}
-    else{btn.textContent='✗ No response';btn.style.color='var(--red)';}
-  }catch(e){btn.textContent='✗ Error';btn.style.color='var(--red)';}
-  setTimeout(()=>{btn.textContent='Test AI connection';btn.style.color='';btn.disabled=false;},3000);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -1432,9 +1446,15 @@ const FALLBACK_QG2=[
 // ── Init ────────────────────────────────────────────────────────────────────���─
 window.addEventListener('DOMContentLoaded',async()=>{
   const t=loadTok();if(t){document.getElementById('tok').value=t;const h=Math.max(0,Math.round(((+localStorage.getItem(TE)||0)-Date.now())/36e5));document.getElementById('th-tok').textContent=`Token cached ~${h}h`;document.getElementById('th-tok').className='th ok';}
-  const ak=sessionStorage.getItem('tc4s_aikey');if(ak)document.getElementById('ai-key').value=ak;
-  const au=sessionStorage.getItem('tc4s_aiurl');if(au)document.getElementById('ai-baseurl').value=au;
-  const am=sessionStorage.getItem('tc4s_aimodel');if(am)document.getElementById('ai-model').value=am;
+  // Restore AI credentials (localStorage with TTL, fallback to sessionStorage)
+  const ak=_aiLoad('key')||sessionStorage.getItem(AI_KEYS.key);if(ak)document.getElementById('ai-key').value=ak;
+  const au=_aiLoad('url')||sessionStorage.getItem(AI_KEYS.url);if(au)document.getElementById('ai-baseurl').value=au;
+  const am=_aiLoad('model')||sessionStorage.getItem(AI_KEYS.model);if(am)document.getElementById('ai-model').value=am;
+  if(_aiAlive()){
+    const h=Math.max(0,Math.round(((+localStorage.getItem(AI_KEYS.exp)||0)-Date.now())/36e5));
+    const hint=document.getElementById('ai-key-hint');
+    if(hint&&(ak||au)){hint.textContent=`Cached ~${h}h. Cleared on expiry or browser data wipe.`;hint.className='th ok';}
+  }
   onProviderChange();
   await loadRules();
   if(getTok()) loadMilestones();
