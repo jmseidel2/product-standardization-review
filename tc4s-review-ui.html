@@ -322,9 +322,6 @@ table.rt tr:hover td{background:#1e2018}
         <input type="text" id="ai-baseurl" placeholder="https://your-blockbrain-endpoint/v1" oninput="saveAIKey()">
         <div class="th">OpenAI-compatible endpoint root (without <code style="font-family:var(--mono)">/chat/completions</code>).</div>
       </div>
-      <label>Model</label>
-      <select id="ai-model-select" onchange="onModelSelectChange()" style="margin-bottom:6px"></select>
-      <input type="text" id="ai-model" placeholder="model name" value="" style="display:none" oninput="saveAIKey()">
       <button class="rbtn sec" id="ai-test-btn" onclick="testAI()">Test AI connection</button>
       <div class="th" id="ai-test-status" style="margin-top:4px"></div>
     </div>
@@ -413,27 +410,23 @@ function onTok(){const t=document.getElementById('tok').value.trim();if(t){saveT
 
 // ── AI credentials (localStorage with 12h TTL, like the GitHub token) ────────
 const AI_TTL_MS=12*36e5;
-const AI_KEYS={key:'tc4s_aikey',url:'tc4s_aiurl',model:'tc4s_aimodel',exp:'tc4s_aiexp'};
+const AI_KEYS={key:'tc4s_aikey',url:'tc4s_aiurl',exp:'tc4s_aiexp'};
 function _aiAlive(){const e=+localStorage.getItem(AI_KEYS.exp)||0;if(Date.now()>e){Object.values(AI_KEYS).forEach(k=>localStorage.removeItem(k));return false;}return true;}
 function _aiLoad(name){return _aiAlive()?(localStorage.getItem(AI_KEYS[name])||''):'';}
 function saveAIKey(){
   const k=document.getElementById('ai-key').value.trim();
   const u=document.getElementById('ai-baseurl')?.value.trim()||'';
-  const m=document.getElementById('ai-model').value.trim();
-  if(k||u||m){
+  if(k||u){
     localStorage.setItem(AI_KEYS.exp,Date.now()+AI_TTL_MS);
     if(k) localStorage.setItem(AI_KEYS.key,k); else localStorage.removeItem(AI_KEYS.key);
     if(u) localStorage.setItem(AI_KEYS.url,u); else localStorage.removeItem(AI_KEYS.url);
-    if(m) localStorage.setItem(AI_KEYS.model,m); else localStorage.removeItem(AI_KEYS.model);
   }
   // Mirror to sessionStorage too so older tabs in the same session see it
   if(k)sessionStorage.setItem(AI_KEYS.key,k);
   if(u)sessionStorage.setItem(AI_KEYS.url,u);
-  if(m)sessionStorage.setItem(AI_KEYS.model,m);
 }
 function getAIKey(){return document.getElementById('ai-key').value.trim()||_aiLoad('key')||sessionStorage.getItem(AI_KEYS.key)||'';}
 function getAIUrl(){return document.getElementById('ai-baseurl')?.value.trim()||_aiLoad('url')||sessionStorage.getItem(AI_KEYS.url)||'';}
-function getAIModel(){return document.getElementById('ai-model').value.trim()||'';}
 function getAIProvider(){return document.getElementById('ai-provider').value;}
 function aiEnabled(){return document.getElementById('ai-master').checked&&!!getAIKey();}
 function aiGroupOn(g){return document.getElementById('ai-master').checked&&document.getElementById('ai-'+g)?.checked;}
@@ -466,29 +459,7 @@ function updateAILabels(){
     if(document.getElementById('ai-'+g+'-lbl')) document.getElementById('ai-'+g+'-lbl').className='ai-label'+(on?' on':'');
   });
 }
-// Per-provider model suggestions. Custom is always offered for tenant-specific deployments.
-const MODEL_OPTIONS={
-  openai:['gpt-4o','gpt-4o-mini','gpt-4-turbo','gpt-4','gpt-3.5-turbo','o1-mini'],
-  blockbrain:['gpt-4o','gpt-4o-mini','gpt-4','claude-3-5-sonnet','claude-3-haiku','llama-3.1-70b','mistral-large'],
-};
-function populateModelOptions(){
-  const p=getAIProvider();
-  const sel=document.getElementById('ai-model-select');
-  const input=document.getElementById('ai-model');
-  const opts=MODEL_OPTIONS[p]||MODEL_OPTIONS.openai;
-  const current=input.value.trim();
-  sel.innerHTML=opts.map(m=>`<option value="${m}">${m}</option>`).join('')+'<option value="__custom">Custom…</option>';
-  if(current&&opts.includes(current)){sel.value=current;input.style.display='none';}
-  else if(current){sel.value='__custom';input.style.display='block';}
-  else{sel.value=opts[0];input.value=opts[0];input.style.display='none';saveAIKey();}
-}
-function onModelSelectChange(){
-  const sel=document.getElementById('ai-model-select');
-  const input=document.getElementById('ai-model');
-  if(sel.value==='__custom'){input.style.display='block';input.value='';input.focus();}
-  else{input.style.display='none';input.value=sel.value;saveAIKey();}
-}
-const PROVIDER_DEFAULT_URL={blockbrain:'https://catena-x.kb.theblockbrain.ai/'};
+const PROVIDER_DEFAULT_URL={blockbrain:'https://blocky.theblockbrain.ai/v1'};
 function onProviderChange(){
   const p=getAIProvider();
   document.getElementById('custom-url-row').style.display=(p==='blockbrain'||p==='custom')?'block':'none';
@@ -497,8 +468,6 @@ function onProviderChange(){
     urlInput.value=PROVIDER_DEFAULT_URL[p];
     saveAIKey();
   }
-  document.getElementById('ai-model').value='';
-  populateModelOptions();
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -621,7 +590,7 @@ async function loadMilestones(){
 
 // ── AI API ────────────────────────────────────────────────────────────────────
 async function callAI(prompt,context,opts={}){
-  const key=getAIKey(),provider=getAIProvider(),model=getAIModel();
+  const key=getAIKey(),provider=getAIProvider();
   if(!key) throw new Error('No API key configured.');
   const baseUrl=(provider==='blockbrain'||provider==='custom')?getAIUrl():'https://api.openai.com/v1';
   if((provider==='blockbrain'||provider==='custom')&&!baseUrl) throw new Error('Base URL is required for '+provider+'.');
@@ -629,7 +598,7 @@ async function callAI(prompt,context,opts={}){
   const systemPrompt='You are a TC4S (Technical Committee for Standardisation) reviewer for Catena-X standards. Be precise, objective, and concise. Always respond with valid JSON in the exact format requested. Do not add explanations outside the JSON structure.';
   const messages=[{role:'user',content:`${prompt}\n\nContent to analyse:\n\`\`\`\n${context.slice(0,3000)}\n\`\`\``}];
   const headers={'Content-Type':'application/json','Authorization':`Bearer ${key}`};
-  const body=JSON.stringify({model,max_tokens:400,temperature:0.1,messages:[{role:'system',content:systemPrompt},...messages]});
+  const body=JSON.stringify({max_tokens:400,temperature:0.1,messages:[{role:'system',content:systemPrompt},...messages]});
   let r;
   try{r=await fetch(url,{method:'POST',headers,body});}
   catch(e){
@@ -661,7 +630,7 @@ async function testAI(){
     btn.textContent='✓ Connected';
     btn.style.color='var(--cx-lime)';
     btn.style.borderColor='var(--cx-lime)';
-    status.textContent=`OK · ${getAIProvider()} · ${getAIModel()||'default model'}`;
+    status.textContent=`OK · ${getAIProvider()}`;
     status.className='th ok';
     setAIStatus('ok',`${getAIProvider()}`);
   }catch(e){
@@ -1449,7 +1418,6 @@ window.addEventListener('DOMContentLoaded',async()=>{
   // Restore AI credentials (localStorage with TTL, fallback to sessionStorage)
   const ak=_aiLoad('key')||sessionStorage.getItem(AI_KEYS.key);if(ak)document.getElementById('ai-key').value=ak;
   const au=_aiLoad('url')||sessionStorage.getItem(AI_KEYS.url);if(au)document.getElementById('ai-baseurl').value=au;
-  const am=_aiLoad('model')||sessionStorage.getItem(AI_KEYS.model);if(am)document.getElementById('ai-model').value=am;
   if(_aiAlive()){
     const h=Math.max(0,Math.round(((+localStorage.getItem(AI_KEYS.exp)||0)-Date.now())/36e5));
     const hint=document.getElementById('ai-key-hint');
