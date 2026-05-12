@@ -362,8 +362,13 @@ table.rt tr:hover td{background:var(--bg3)}
       <div class="th" id="ai-key-hint">Cached in localStorage for 12h. Never committed.</div>
       <div id="custom-url-row" style="display:none">
         <label>Base URL <span style="color:var(--cx-signal)">*</span></label>
-        <input type="text" id="ai-baseurl" placeholder="https://your-blockbrain-endpoint/v1" oninput="saveAIKey()">
-        <div class="th">OpenAI-compatible endpoint root (without <code style="font-family:var(--mono)">/chat/completions</code>).</div>
+        <input type="text" id="ai-baseurl" placeholder="https://blocky.theblockbrain.ai" oninput="saveAIKey()">
+        <div class="th">Endpoint origin (no path). For OpenAI-compatible providers include <code style="font-family:var(--mono)">/v1</code>.</div>
+      </div>
+      <div id="bot-id-row" style="display:none">
+        <label>Bot ID <span style="color:var(--cx-signal)">*</span></label>
+        <input type="text" id="ai-botid" placeholder="d502e008" oninput="saveAIKey()">
+        <div class="th">Blockbrain bot to converse with. Required for the Blockbrain provider.</div>
       </div>
       <button class="rbtn sec" id="ai-test-btn" onclick="testAI()">Test AI connection</button>
       <div class="th" id="ai-test-status" style="margin-top:4px"></div>
@@ -453,23 +458,27 @@ function onTok(){const t=document.getElementById('tok').value.trim();if(t){saveT
 
 // ── AI credentials (localStorage with 12h TTL, like the GitHub token) ────────
 const AI_TTL_MS=12*36e5;
-const AI_KEYS={key:'tc4s_aikey',url:'tc4s_aiurl',exp:'tc4s_aiexp'};
+const AI_KEYS={key:'tc4s_aikey',url:'tc4s_aiurl',bot:'tc4s_aibot',exp:'tc4s_aiexp'};
 function _aiAlive(){const e=+localStorage.getItem(AI_KEYS.exp)||0;if(Date.now()>e){Object.values(AI_KEYS).forEach(k=>localStorage.removeItem(k));return false;}return true;}
 function _aiLoad(name){return _aiAlive()?(localStorage.getItem(AI_KEYS[name])||''):'';}
 function saveAIKey(){
   const k=document.getElementById('ai-key').value.trim();
   const u=document.getElementById('ai-baseurl')?.value.trim()||'';
-  if(k||u){
+  const b=document.getElementById('ai-botid')?.value.trim()||'';
+  if(k||u||b){
     localStorage.setItem(AI_KEYS.exp,Date.now()+AI_TTL_MS);
     if(k) localStorage.setItem(AI_KEYS.key,k); else localStorage.removeItem(AI_KEYS.key);
     if(u) localStorage.setItem(AI_KEYS.url,u); else localStorage.removeItem(AI_KEYS.url);
+    if(b) localStorage.setItem(AI_KEYS.bot,b); else localStorage.removeItem(AI_KEYS.bot);
   }
   // Mirror to sessionStorage too so older tabs in the same session see it
   if(k)sessionStorage.setItem(AI_KEYS.key,k);
   if(u)sessionStorage.setItem(AI_KEYS.url,u);
+  if(b)sessionStorage.setItem(AI_KEYS.bot,b);
 }
 function getAIKey(){return document.getElementById('ai-key').value.trim()||_aiLoad('key')||sessionStorage.getItem(AI_KEYS.key)||'';}
 function getAIUrl(){return document.getElementById('ai-baseurl')?.value.trim()||_aiLoad('url')||sessionStorage.getItem(AI_KEYS.url)||'';}
+function getBotId(){return document.getElementById('ai-botid')?.value.trim()||_aiLoad('bot')||sessionStorage.getItem(AI_KEYS.bot)||'';}
 function getAIProvider(){return document.getElementById('ai-provider').value;}
 function aiEnabled(){return document.getElementById('ai-master').checked&&!!getAIKey();}
 function aiGroupOn(g){return document.getElementById('ai-master').checked&&document.getElementById('ai-'+g)?.checked;}
@@ -502,12 +511,14 @@ function updateAILabels(){
     if(document.getElementById('ai-'+g+'-lbl')) document.getElementById('ai-'+g+'-lbl').className='ai-label'+(on?' on':'');
   });
 }
-const PROVIDER_DEFAULT_URL={blockbrain:'https://blocky.theblockbrain.ai/v1'};
+const PROVIDER_DEFAULT_URL={blockbrain:'https://catena-x.kb.theblockbrain.ai'};
 function onProviderChange(){
   const p=getAIProvider();
-  document.getElementById('custom-url-row').style.display=(p==='blockbrain'||p==='custom')?'block':'none';
+  const isBB=p==='blockbrain';
+  document.getElementById('custom-url-row').style.display=(isBB||p==='custom')?'block':'none';
+  document.getElementById('bot-id-row').style.display=isBB?'block':'none';
   const urlInput=document.getElementById('ai-baseurl');
-  if((p==='blockbrain'||p==='custom')&&!urlInput.value.trim()&&PROVIDER_DEFAULT_URL[p]){
+  if((isBB||p==='custom')&&!urlInput.value.trim()&&PROVIDER_DEFAULT_URL[p]){
     urlInput.value=PROVIDER_DEFAULT_URL[p];
     saveAIKey();
   }
@@ -632,30 +643,72 @@ async function loadMilestones(){
 }
 
 // ── AI API ────────────────────────────────────────────────────────────────────
-async function callAI(prompt,context,opts={}){
-  const key=getAIKey(),provider=getAIProvider();
+const AI_SYS_PROMPT='You are a TC4S (Technical Committee for Standardisation) reviewer for Catena-X standards. Be precise, objective, and concise. Always respond with valid JSON in the exact format requested. Do not add explanations outside the JSON structure.';
+
+// Blockbrain conversation state — one convo per review run (cleared by resetBlockbrainConvo()).
+function _uuid(){return crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);});}
+function _bbSession(){let s=sessionStorage.getItem('tc4s_bb_session');if(!s){s=_uuid();sessionStorage.setItem('tc4s_bb_session',s);}return s;}
+let _BB_CONVO_ID=null;
+function resetBlockbrainConvo(){_BB_CONVO_ID=null;}
+async function _bbEnsureConvo(baseUrl,key,botId,convoName){
+  if(_BB_CONVO_ID) return _BB_CONVO_ID;
+  const url=`${baseUrl}/cortex/active-bot/${encodeURIComponent(botId)}/convo`;
+  const body=JSON.stringify({convoName:convoName||`tc4s-review-${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}`,sessionId:_bbSession()});
+  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body});
+  if(!r.ok){const txt=await r.text().catch(()=>'');throw new Error(`HTTP ${r.status} creating convo at ${url}${txt?' — '+txt.slice(0,160):''}`);}
+  const d=await r.json();
+  const convoId=d.dataRoomId||d.body?.dataRoomId||d.convoId||d.body?.convoId;
+  if(!convoId) throw new Error(`Convo created but no dataRoomId in response: ${JSON.stringify(d).slice(0,160)}`);
+  _BB_CONVO_ID=convoId;return convoId;
+}
+
+async function _callBlockbrain(prompt,context,opts){
+  const key=getAIKey(),botId=getBotId();
+  let baseUrl=getAIUrl();
   if(!key) throw new Error('No API key configured.');
-  const baseUrl=(provider==='blockbrain'||provider==='custom')?getAIUrl():'https://api.openai.com/v1';
-  if((provider==='blockbrain'||provider==='custom')&&!baseUrl) throw new Error('Base URL is required for '+provider+'.');
-  const url=baseUrl.replace(/\/$/,'')+'/chat/completions';
-  const systemPrompt='You are a TC4S (Technical Committee for Standardisation) reviewer for Catena-X standards. Be precise, objective, and concise. Always respond with valid JSON in the exact format requested. Do not add explanations outside the JSON structure.';
-  const messages=[{role:'user',content:`${prompt}\n\nContent to analyse:\n\`\`\`\n${context.slice(0,3000)}\n\`\`\``}];
-  const headers={'Content-Type':'application/json','Authorization':`Bearer ${key}`};
-  const body=JSON.stringify({max_tokens:400,temperature:0.1,messages:[{role:'system',content:systemPrompt},...messages]});
+  if(!baseUrl) throw new Error('Base URL is required for Blockbrain.');
+  if(!botId) throw new Error('Bot ID is required for Blockbrain.');
+  baseUrl=baseUrl.replace(/\/$/,'');
+  const convoId=await _bbEnsureConvo(baseUrl,key,botId);
+  const url=`${baseUrl}/cortex/completions/v2/user-input`;
+  const content=`${AI_SYS_PROMPT}\n\n[Task]\n${prompt}\n\n[Content to analyse]\n\`\`\`\n${context.slice(0,3000)}\n\`\`\``;
+  const body=JSON.stringify({content,convoId,sessionId:_bbSession(),actionType:'user',messageType:'user-question'});
   let r;
-  try{r=await fetch(url,{method:'POST',headers,body});}
-  catch(e){
-    const err=new Error(`Network/CORS error reaching ${url}. ${e.message||''}`.trim());
-    err.url=url;throw err;
-  }
+  try{r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body});}
+  catch(e){const err=new Error(`Network/CORS error reaching ${url}. ${e.message||''}`.trim());err.url=url;throw err;}
   if(!r.ok){
     const txt=await r.text().catch(()=>'');
-    const err=new Error(`HTTP ${r.status} from ${url}${txt?' — '+txt.slice(0,120):''}`);
-    err.status=r.status;err.url=url;
-    throw err;
+    // 404/410 on the convo → it got expired/deleted server-side. Reset and let the caller retry.
+    if(r.status===404||r.status===410){_BB_CONVO_ID=null;}
+    const err=new Error(`HTTP ${r.status} from ${url}${txt?' — '+txt.slice(0,160):''}`);
+    err.status=r.status;err.url=url;throw err;
   }
   const d=await r.json();
-  const text=d.choices?.[0]?.message?.content;
+  return d.body?.content ?? d.content ?? '';
+}
+
+async function _callOpenAI(prompt,context,opts){
+  const key=getAIKey(),provider=getAIProvider();
+  if(!key) throw new Error('No API key configured.');
+  let baseUrl=provider==='custom'?getAIUrl():'https://api.openai.com/v1';
+  if(provider==='custom'&&!baseUrl) throw new Error('Base URL is required for custom provider.');
+  baseUrl=baseUrl.replace(/\/$/,'');
+  try{const u=new URL(baseUrl);if(u.pathname===''||u.pathname==='/') baseUrl=u.origin+'/v1';}catch{}
+  const url=baseUrl+'/chat/completions';
+  const messages=[{role:'system',content:AI_SYS_PROMPT},{role:'user',content:`${prompt}\n\nContent to analyse:\n\`\`\`\n${context.slice(0,3000)}\n\`\`\``}];
+  let r;
+  try{r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({max_tokens:400,temperature:0.1,messages})});}
+  catch(e){const err=new Error(`Network/CORS error reaching ${url}. ${e.message||''}`.trim());err.url=url;throw err;}
+  if(!r.ok){const txt=await r.text().catch(()=>'');const err=new Error(`HTTP ${r.status} from ${url}${txt?' — '+txt.slice(0,160):''}`);err.status=r.status;err.url=url;throw err;}
+  const d=await r.json();
+  return d.choices?.[0]?.message?.content ?? '';
+}
+
+async function callAI(prompt,context,opts={}){
+  const provider=getAIProvider();
+  const text=provider==='blockbrain'
+    ? await _callBlockbrain(prompt,context,opts)
+    : await _callOpenAI(prompt,context,opts);
   if(!text) throw new Error('Empty response — model returned no content.');
   if(opts.raw) return text;
   try{return JSON.parse(text.replace(/```json|```/g,'').trim());}
@@ -667,6 +720,7 @@ async function testAI(){
   const status=document.getElementById('ai-test-status');
   btn.textContent='Testing…';btn.disabled=true;btn.style.color='';btn.style.borderColor='';
   status.textContent='';status.className='th';status.style.color='';
+  resetBlockbrainConvo();  // Test creates a fresh convo end-to-end (Blockbrain only).
   try{
     const r=await callAI('Respond with only this JSON: {"result":"pass","confidence":1.0,"finding":"AI connection successful"}','test');
     if(!r?.finding) throw new Error('Unexpected response shape.');
@@ -1138,6 +1192,7 @@ async function runOnSelected(){
   const mp=document.getElementById('mp');
   mp.innerHTML=`<div class="logbox" id="lb"></div><div class="empty"><div class="spin"></div><div style="font-family:var(--mono);font-size:11px">Analysing…</div></div>`;
   const aI=[],aP=[];
+  resetBlockbrainConvo();  // Fresh Blockbrain conversation per review run; no-op for other providers.
   try{
     if(aiEnabled()) log('AI semantic analysis: enabled','lai');
     for(const issue of sel.issues){
@@ -1461,10 +1516,11 @@ window.addEventListener('DOMContentLoaded',async()=>{
   // Restore AI credentials (localStorage with TTL, fallback to sessionStorage)
   const ak=_aiLoad('key')||sessionStorage.getItem(AI_KEYS.key);if(ak)document.getElementById('ai-key').value=ak;
   const au=_aiLoad('url')||sessionStorage.getItem(AI_KEYS.url);if(au)document.getElementById('ai-baseurl').value=au;
+  const ab=_aiLoad('bot')||sessionStorage.getItem(AI_KEYS.bot);if(ab)document.getElementById('ai-botid').value=ab;
   if(_aiAlive()){
     const h=Math.max(0,Math.round(((+localStorage.getItem(AI_KEYS.exp)||0)-Date.now())/36e5));
     const hint=document.getElementById('ai-key-hint');
-    if(hint&&(ak||au)){hint.textContent=`Cached ~${h}h. Cleared on expiry or browser data wipe.`;hint.className='th ok';}
+    if(hint&&(ak||au||ab)){hint.textContent=`Cached ~${h}h. Cleared on expiry or browser data wipe.`;hint.className='th ok';}
   }
   onProviderChange();
   await loadRules();
