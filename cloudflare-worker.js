@@ -27,14 +27,40 @@ export default {
     const origin = request.headers.get('Origin') || '';
     const cors = {
       'Access-Control-Allow-Origin': origin === env.ALLOWED_ORIGIN ? origin : '',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, X-GitHub-Token',
       'Access-Control-Max-Age': '86400',
       'Vary': 'Origin',
     };
 
+    // Health-check + config visibility (no secret values exposed, just presence)
+    const envState = {
+      BLOCKBRAIN_KEY: !!env.BLOCKBRAIN_KEY,
+      BLOCKBRAIN_URL: !!env.BLOCKBRAIN_URL,
+      BLOCKBRAIN_BOT_ID: !!env.BLOCKBRAIN_BOT_ID,
+      AUTH_REPO: !!env.AUTH_REPO,
+      ALLOWED_ORIGIN: !!env.ALLOWED_ORIGIN,
+    };
+
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+    if (request.method === 'GET') {
+      return json({
+        worker: 'tc4s-ai-proxy',
+        status: 'alive',
+        env_vars_present: envState,
+        allowed_origin_value: env.ALLOWED_ORIGIN || null,
+        request_origin: origin || null,
+        cors_will_allow: origin && origin === env.ALLOWED_ORIGIN,
+      }, 200, { 'Content-Type': 'application/json' });
+    }
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, cors);
+
+    // Fail fast if Worker is misconfigured
+    const missing = Object.entries(envState).filter(([, v]) => !v).map(([k]) => k);
+    if (missing.length) {
+      console.error('Worker missing env vars:', missing.join(','));
+      return json({ error: `Worker misconfigured — missing env vars: ${missing.join(', ')}` }, 500, cors);
+    }
 
     // 1. GitHub token from caller
     const ghToken = request.headers.get('X-GitHub-Token');
@@ -100,6 +126,7 @@ export default {
       );
       if (!convoResp.ok) {
         const t = await convoResp.text().catch(() => '');
+        console.error('Blockbrain convo failed:', convoResp.status, t.slice(0, 300));
         return json(
           { error: `Blockbrain convo ${convoResp.status}: ${t.slice(0, 200)}` },
           convoResp.status === 401 ? 502 : convoResp.status,
@@ -109,13 +136,16 @@ export default {
       const d = await convoResp.json();
       convoId = d.dataRoomId || d.body?.dataRoomId || d.convoId || d.body?.convoId;
       if (!convoId) {
+        console.error('Blockbrain convo OK but no id in body:', JSON.stringify(d).slice(0, 300));
         return json(
           { error: `Convo created but no convoId in response: ${JSON.stringify(d).slice(0, 200)}` },
           502,
           cors
         );
       }
+      console.log('Blockbrain convo created:', convoId);
     } catch (e) {
+      console.error('Convo fetch threw:', e.message);
       return json({ error: `Convo create failed: ${e.message}` }, 502, cors);
     }
 
@@ -138,6 +168,7 @@ export default {
       });
       if (!aiResp.ok) {
         const t = await aiResp.text().catch(() => '');
+        console.error('Blockbrain user-input failed:', aiResp.status, t.slice(0, 300));
         return json(
           { error: `Blockbrain ${aiResp.status}: ${t.slice(0, 200)}` },
           aiResp.status === 401 ? 502 : aiResp.status,
@@ -147,6 +178,7 @@ export default {
       const d = await aiResp.json();
       assistantText = d.body?.content ?? d.content ?? '';
     } catch (e) {
+      console.error('User-input fetch threw:', e.message);
       return json({ error: `User-input failed: ${e.message}` }, 502, cors);
     }
 
