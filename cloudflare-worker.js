@@ -207,15 +207,21 @@ export default {
   },
 };
 
-// Parses a Blockbrain SSE response body and concatenates the assistant's
-// text content across data: chunks. Critically: skips frames that echo
-// the user prompt (event: user_message, role: user, messageType: user-question)
-// so we only return what the bot actually said.
+// Parses a Blockbrain SSE response and reconstructs the assistant's reply.
+//
+// Frame map (empirically determined from this Blockbrain tenant):
+//   event: user_message           prompt echo                — skip
+//   event: message_start          assistant turn marker      — skip
+//   event: new_token              data.token (assistant)     — KEEP, concatenate
+//   event: thinking_{start,token,finished}  reasoning trace  — skip
+//   event: message_end            turn end                   — skip
+//   event: langfuse_url / attached_context / message_ready   — skip
+//
+// The model splits its JSON output across many small new_token frames
+// (often mid-key), so we concatenate first and let the caller JSON.parse.
 function parseSseContent(text) {
-  const USER_ECHO_EVENTS = new Set(['user_message', 'user', 'prompt']);
   const lines = text.split(/\r?\n/);
   let out = '';
-  let lastAssistantData = null;
   let currentEvent = '';
 
   for (const line of lines) {
@@ -223,39 +229,17 @@ function parseSseContent(text) {
       currentEvent = line.slice(6).trim();
       continue;
     }
+    if (currentEvent !== 'new_token') continue;
     if (!line.startsWith('data:')) continue;
+
     const payload = line.slice(5).trim();
-    if (!payload || payload === '[DONE]') continue;
-
-    let obj;
-    try { obj = JSON.parse(payload); }
-    catch {
-      if (!USER_ECHO_EVENTS.has(currentEvent) && payload) out += payload;
-      continue;
+    if (!payload) continue;
+    try {
+      const obj = JSON.parse(payload);
+      if (typeof obj.token === 'string') out += obj.token;
+    } catch {
+      // malformed JSON in a new_token frame — skip silently
     }
-
-    // Skip prompt-echo frames so we never return the user input as the answer
-    if (USER_ECHO_EVENTS.has(currentEvent)) continue;
-    if (obj.role === 'user') continue;
-    if (obj.messageType === 'user-question') continue;
-
-    lastAssistantData = obj;
-    if (typeof obj.content === 'string') out += obj.content;
-    else if (typeof obj.text === 'string') out += obj.text;
-    else if (typeof obj.delta === 'string') out += obj.delta;
-    else if (obj.delta?.content) out += obj.delta.content;
-    else if (obj.body?.content) out += obj.body.content;
-    else if (obj.choices?.[0]?.delta?.content) out += obj.choices[0].delta.content;
-  }
-
-  // Fallback: take the last seen assistant frame's content field
-  if (!out && lastAssistantData) {
-    out =
-      lastAssistantData.content ??
-      lastAssistantData.text ??
-      lastAssistantData.body?.content ??
-      lastAssistantData.message?.content ??
-      '';
   }
   return out;
 }
