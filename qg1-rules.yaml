@@ -30,7 +30,7 @@ rules:
       (2) Does it clearly explain WHY this change is needed?
       (3) Does it identify a real coordination problem between independent parties?
       Be specific — quote the relevant phrase if passing, or name what is missing if failing.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       Issue body must contain a Management Summary section with a clear summary of the proposal that
       allows an initial assessment of its suitability for standardization (>=30 words, no TBD/TODO).
@@ -86,7 +86,7 @@ rules:
       Assess: (1) Are objectives clearly stated? (2) Is scope defined with in-scope and out-of-scope?
       (3) Are boundaries identifiable? (4) Is this a mature proposal or just a concept note?
       Be specific — quote the relevant phrase if passing, or name what is missing if failing.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       A simple concept note or empty Issue is insufficient. Objectives, scope, and boundaries must be clearly
       identifiable in the Issue body (rule of thumb: ~200+ words for an SR).
@@ -109,7 +109,7 @@ rules:
       Assess: (1) Is an overlap check explicitly documented? (2) Are existing CX standard IDs referenced
       with differentiation? (3) Does the described scope appear to overlap with known CX standards?
       Be specific — quote the relevant phrase if passing, or name what is missing if failing.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       Before approving a new SR, it must be checked whether the content is already addressed by existing
       Catena-X standards. The overlap check must be documented in the Issue.
@@ -131,7 +131,7 @@ rules:
       (3) Could this be solved by bilateral agreement rather than a standard?
       Note: features that genuinely require interoperability between independent parties are still in scope.
       Be specific — quote the relevant phrase.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       An SR must not standardize a single feature implementation. Catena-X standards aim at interoperability
       between independent parties.
@@ -176,7 +176,7 @@ rules:
       (e.g. MUST statement changes, data model field removals, API changes)?
       (4) Is the change type upgraded (e.g. Minor → Major) without sufficient explanation?
       Be specific — quote the relevant phrase.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: CR must state version change type with clear rationale. Unjustified upgrades undermine SemVer reliability.
     fail_if:
       - No version change type stated
@@ -197,7 +197,7 @@ rules:
       assessment present for each (e.g. CX-ID → UID type cascades)? (3) Are there implicit dependencies
       not mentioned (shared data models, CX-IDs, shared protocols)? List any CX standard IDs found.
       Be specific — quote the relevant phrase if passing, or name what is missing.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       If SR/CR affects referenced standards, this must be documented in the Issue with cascading impact
       assessment (e.g. CX-ID → UID).
