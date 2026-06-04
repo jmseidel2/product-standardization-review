@@ -1,0 +1,164 @@
+// tc4s-ai-proxy — Cloudflare Worker
+//
+// Proxies TC4S review AI requests to the Blockbrain Cortex API.
+// Auth: caller's GitHub token must have read access to AUTH_REPO.
+// Optional: ALLOWED_LOGINS env var for fine-grained pilot whitelist.
+//
+// Cortex flow per AI call (stateless, one convo per call):
+//   1. POST {BLOCKBRAIN_URL}/cortex/active-bot/{BOT_ID}/convo  → convoId
+//   2. POST {BLOCKBRAIN_URL}/cortex/completions/v2/user-input → assistant text
+//
+// Required env vars / secrets (configure in CF dashboard → Variables and Secrets):
+//   BLOCKBRAIN_KEY     (Secret) Bearer JWT for Blockbrain
+//   BLOCKBRAIN_URL     (Text)   e.g. https://blocky.theblockbrain.ai
+//   BLOCKBRAIN_BOT_ID  (Text)   e.g. 6a200fc07a495eca14584185
+//   AUTH_REPO          (Text)   e.g. catenax-eV/cx-standard-governance
+//   ALLOWED_ORIGIN     (Text)   e.g. https://tc4s-review-assistant.pages.dev
+//   ALLOWED_LOGINS     (Text)   optional, comma-separated GitHub handles
+
+const SYSTEM_PROMPT =
+  'You are a TC4S (Technical Committee for Standardisation) reviewer for ' +
+  'Catena-X standards. Be precise, objective, and concise. Always respond ' +
+  'with valid JSON in the exact format requested. Do not add explanations ' +
+  'outside the JSON structure.';
+
+export default {
+  async fetch(request, env) {
+    const origin = request.headers.get('Origin') || '';
+    const cors = {
+      'Access-Control-Allow-Origin': origin === env.ALLOWED_ORIGIN ? origin : '',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, X-GitHub-Token',
+      'Access-Control-Max-Age': '86400',
+      'Vary': 'Origin',
+    };
+
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, cors);
+
+    // 1. GitHub token from caller
+    const ghToken = request.headers.get('X-GitHub-Token');
+    if (!ghToken) return json({ error: 'Missing X-GitHub-Token header' }, 401, cors);
+
+    // 2. Verify read access to AUTH_REPO
+    const repoCheck = await fetch(`https://api.github.com/repos/${env.AUTH_REPO}`, {
+      headers: {
+        'Authorization': `Bearer ${ghToken}`,
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'tc4s-ai-proxy',
+      },
+    });
+    if (repoCheck.status === 401) return json({ error: 'GitHub token invalid or expired' }, 401, cors);
+    if (repoCheck.status !== 200) return json({ error: 'No access to auth repo' }, 403, cors);
+
+    // 3. Optional fine-grained allowlist
+    if (env.ALLOWED_LOGINS && env.ALLOWED_LOGINS.trim()) {
+      const u = await fetch('https://api.github.com/user', {
+        headers: {
+          'Authorization': `Bearer ${ghToken}`,
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'tc4s-ai-proxy',
+        },
+      });
+      if (!u.ok) return json({ error: 'Could not resolve GitHub user' }, 401, cors);
+      const { login } = await u.json();
+      const allow = env.ALLOWED_LOGINS.split(',').map(s => s.trim()).filter(Boolean);
+      if (!allow.includes(login)) {
+        return json({ error: `User '${login}' not in pilot allowlist` }, 403, cors);
+      }
+    }
+
+    // 4. Read caller payload
+    let payload;
+    try { payload = await request.json(); }
+    catch { return json({ error: 'Invalid JSON body' }, 400, cors); }
+    const { prompt, context } = payload;
+    if (!prompt) return json({ error: 'Missing "prompt" field' }, 400, cors);
+
+    const userContent =
+      `${SYSTEM_PROMPT}\n\n[Task]\n${prompt}\n\n` +
+      `[Content to analyse]\n\`\`\`\n${String(context || '').slice(0, 3000)}\n\`\`\``;
+
+    // 5. Blockbrain Cortex: create convo
+    const baseUrl = env.BLOCKBRAIN_URL.replace(/\/$/, '');
+    const sessionId = crypto.randomUUID();
+    let convoId;
+    try {
+      const convoResp = await fetch(
+        `${baseUrl}/cortex/active-bot/${encodeURIComponent(env.BLOCKBRAIN_BOT_ID)}/convo`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${env.BLOCKBRAIN_KEY}`,
+          },
+          body: JSON.stringify({
+            convoName: `tc4s-review-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}`,
+            sessionId,
+          }),
+        }
+      );
+      if (!convoResp.ok) {
+        const t = await convoResp.text().catch(() => '');
+        return json(
+          { error: `Blockbrain convo ${convoResp.status}: ${t.slice(0, 200)}` },
+          convoResp.status === 401 ? 502 : convoResp.status,
+          cors
+        );
+      }
+      const d = await convoResp.json();
+      convoId = d.dataRoomId || d.body?.dataRoomId || d.convoId || d.body?.convoId;
+      if (!convoId) {
+        return json(
+          { error: `Convo created but no convoId in response: ${JSON.stringify(d).slice(0, 200)}` },
+          502,
+          cors
+        );
+      }
+    } catch (e) {
+      return json({ error: `Convo create failed: ${e.message}` }, 502, cors);
+    }
+
+    // 6. Blockbrain Cortex: send user input
+    let assistantText;
+    try {
+      const aiResp = await fetch(`${baseUrl}/cortex/completions/v2/user-input`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${env.BLOCKBRAIN_KEY}`,
+        },
+        body: JSON.stringify({
+          content: userContent,
+          convoId,
+          sessionId,
+          actionType: 'user',
+          messageType: 'user-question',
+        }),
+      });
+      if (!aiResp.ok) {
+        const t = await aiResp.text().catch(() => '');
+        return json(
+          { error: `Blockbrain ${aiResp.status}: ${t.slice(0, 200)}` },
+          aiResp.status === 401 ? 502 : aiResp.status,
+          cors
+        );
+      }
+      const d = await aiResp.json();
+      assistantText = d.body?.content ?? d.content ?? '';
+    } catch (e) {
+      return json({ error: `User-input failed: ${e.message}` }, 502, cors);
+    }
+
+    if (!assistantText) return json({ error: 'Empty response from Blockbrain' }, 502, cors);
+
+    return json({ text: assistantText }, 200, cors);
+  },
+};
+
+function json(obj, status, headers) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { ...headers, 'Content-Type': 'application/json' },
+  });
+}
