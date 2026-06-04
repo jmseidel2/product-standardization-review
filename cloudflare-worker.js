@@ -178,6 +178,8 @@ export default {
       }
       const ct = aiResp.headers.get('content-type') || '';
       const raw = await aiResp.text();
+      console.log('Blockbrain user-input content-type:', ct);
+      console.log('Blockbrain user-input raw (first 800 chars):', raw.slice(0, 800));
       if (ct.includes('text/event-stream') || raw.startsWith('event:') || raw.startsWith('data:')) {
         assistantText = parseSseContent(raw);
         if (!assistantText) {
