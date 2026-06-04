@@ -156,6 +156,7 @@ export default {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Authorization': `Bearer ${env.BLOCKBRAIN_KEY}`,
         },
         body: JSON.stringify({
@@ -175,8 +176,23 @@ export default {
           cors
         );
       }
-      const d = await aiResp.json();
-      assistantText = d.body?.content ?? d.content ?? '';
+      const ct = aiResp.headers.get('content-type') || '';
+      const raw = await aiResp.text();
+      if (ct.includes('text/event-stream') || raw.startsWith('event:') || raw.startsWith('data:')) {
+        assistantText = parseSseContent(raw);
+        if (!assistantText) {
+          console.error('SSE parse yielded no content. Raw (first 500):', raw.slice(0, 500));
+          return json({ error: 'Could not extract content from SSE stream' }, 502, cors);
+        }
+      } else {
+        try {
+          const d = JSON.parse(raw);
+          assistantText = d.body?.content ?? d.content ?? '';
+        } catch (e) {
+          console.error('JSON parse failed. Raw (first 500):', raw.slice(0, 500));
+          return json({ error: `Cannot parse Blockbrain response: ${e.message}` }, 502, cors);
+        }
+      }
     } catch (e) {
       console.error('User-input fetch threw:', e.message);
       return json({ error: `User-input failed: ${e.message}` }, 502, cors);
@@ -187,6 +203,43 @@ export default {
     return json({ text: assistantText }, 200, cors);
   },
 };
+
+// Parses a Blockbrain SSE response body and concatenates text content
+// across all data: chunks. Tolerant to different chunk shapes since the
+// exact Blockbrain event schema isn't publicly documented.
+function parseSseContent(text) {
+  const lines = text.split(/\r?\n/);
+  let out = '';
+  let lastData = null;
+  for (const line of lines) {
+    if (!line.startsWith('data:')) continue;
+    const payload = line.slice(5).trim();
+    if (!payload || payload === '[DONE]') continue;
+    try {
+      const obj = JSON.parse(payload);
+      lastData = obj;
+      if (typeof obj.content === 'string') out += obj.content;
+      else if (typeof obj.text === 'string') out += obj.text;
+      else if (typeof obj.delta === 'string') out += obj.delta;
+      else if (obj.delta?.content) out += obj.delta.content;
+      else if (obj.body?.content) out += obj.body.content;
+      else if (obj.choices?.[0]?.delta?.content) out += obj.choices[0].delta.content;
+    } catch {
+      // not JSON — could be plain text, append as-is
+      if (payload) out += payload;
+    }
+  }
+  // Fallback: use last data block's content field if no incremental delta found
+  if (!out && lastData) {
+    out =
+      lastData.content ??
+      lastData.text ??
+      lastData.body?.content ??
+      lastData.message?.content ??
+      '';
+  }
+  return out;
+}
 
 function json(obj, status, headers) {
   return new Response(JSON.stringify(obj), {
