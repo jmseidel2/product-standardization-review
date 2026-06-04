@@ -618,7 +618,7 @@ async function callAI(prompt,context,opts={}){
   if(!text) throw new Error('Empty response from AI.');
   if(opts.raw) return text;
   try{return JSON.parse(text.replace(/```json|```/g,'').trim());}
-  catch(e){throw new Error('Response is not valid JSON.');}
+  catch(e){throw new Error('Response is not valid JSON. Bot said: '+text.slice(0,200));}
 }
 
 async function testAI(){

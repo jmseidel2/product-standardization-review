@@ -200,6 +200,7 @@ export default {
 
     if (!assistantText) return json({ error: 'Empty response from Blockbrain' }, 502, cors);
 
+    console.log('Assistant response (first 500 chars):', assistantText.slice(0, 500));
     return json({ text: assistantText }, 200, cors);
   },
 };
