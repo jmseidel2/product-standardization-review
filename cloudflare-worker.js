@@ -179,7 +179,7 @@ export default {
       const ct = aiResp.headers.get('content-type') || '';
       const raw = await aiResp.text();
       console.log('Blockbrain user-input content-type:', ct);
-      console.log('Blockbrain user-input raw (first 800 chars):', raw.slice(0, 800));
+      console.log('Blockbrain user-input raw (first 4000 chars):', raw.slice(0, 4000));
       if (ct.includes('text/event-stream') || raw.startsWith('event:') || raw.startsWith('data:')) {
         assistantText = parseSseContent(raw);
         if (!assistantText) {
@@ -207,38 +207,54 @@ export default {
   },
 };
 
-// Parses a Blockbrain SSE response body and concatenates text content
-// across all data: chunks. Tolerant to different chunk shapes since the
-// exact Blockbrain event schema isn't publicly documented.
+// Parses a Blockbrain SSE response body and concatenates the assistant's
+// text content across data: chunks. Critically: skips frames that echo
+// the user prompt (event: user_message, role: user, messageType: user-question)
+// so we only return what the bot actually said.
 function parseSseContent(text) {
+  const USER_ECHO_EVENTS = new Set(['user_message', 'user', 'prompt']);
   const lines = text.split(/\r?\n/);
   let out = '';
-  let lastData = null;
+  let lastAssistantData = null;
+  let currentEvent = '';
+
   for (const line of lines) {
+    if (line.startsWith('event:')) {
+      currentEvent = line.slice(6).trim();
+      continue;
+    }
     if (!line.startsWith('data:')) continue;
     const payload = line.slice(5).trim();
     if (!payload || payload === '[DONE]') continue;
-    try {
-      const obj = JSON.parse(payload);
-      lastData = obj;
-      if (typeof obj.content === 'string') out += obj.content;
-      else if (typeof obj.text === 'string') out += obj.text;
-      else if (typeof obj.delta === 'string') out += obj.delta;
-      else if (obj.delta?.content) out += obj.delta.content;
-      else if (obj.body?.content) out += obj.body.content;
-      else if (obj.choices?.[0]?.delta?.content) out += obj.choices[0].delta.content;
-    } catch {
-      // not JSON — could be plain text, append as-is
-      if (payload) out += payload;
+
+    let obj;
+    try { obj = JSON.parse(payload); }
+    catch {
+      if (!USER_ECHO_EVENTS.has(currentEvent) && payload) out += payload;
+      continue;
     }
+
+    // Skip prompt-echo frames so we never return the user input as the answer
+    if (USER_ECHO_EVENTS.has(currentEvent)) continue;
+    if (obj.role === 'user') continue;
+    if (obj.messageType === 'user-question') continue;
+
+    lastAssistantData = obj;
+    if (typeof obj.content === 'string') out += obj.content;
+    else if (typeof obj.text === 'string') out += obj.text;
+    else if (typeof obj.delta === 'string') out += obj.delta;
+    else if (obj.delta?.content) out += obj.delta.content;
+    else if (obj.body?.content) out += obj.body.content;
+    else if (obj.choices?.[0]?.delta?.content) out += obj.choices[0].delta.content;
   }
-  // Fallback: use last data block's content field if no incremental delta found
-  if (!out && lastData) {
+
+  // Fallback: take the last seen assistant frame's content field
+  if (!out && lastAssistantData) {
     out =
-      lastData.content ??
-      lastData.text ??
-      lastData.body?.content ??
-      lastData.message?.content ??
+      lastAssistantData.content ??
+      lastAssistantData.text ??
+      lastAssistantData.body?.content ??
+      lastAssistantData.message?.content ??
       '';
   }
   return out;
