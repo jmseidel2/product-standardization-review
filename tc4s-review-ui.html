@@ -594,7 +594,7 @@ async function loadMilestones(){
 // ── AI API ────────────────────────────────────────────────────────────────────
 // All AI calls go through this managed proxy. Set this to the deployed
 // Cloudflare Worker URL after first deploy (see cloudflare-worker.js).
-const AI_PROXY_URL='TODO_SET_WORKER_URL';  // e.g. https://tc4s-ai-proxy.<account>.workers.dev
+const AI_PROXY_URL='https://tc4s-ai-proxy.jan-seidel.workers.dev';
 
 async function callAI(prompt,context,opts={}){
   if(AI_PROXY_URL.startsWith('TODO_')) throw new Error('AI proxy URL not configured.');
