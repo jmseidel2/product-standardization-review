@@ -86,7 +86,7 @@ pr_body_rules:
       (1.4) Consequences if not changed — stated? (1.5) Compatibility statement present?
       Is it written in full prose sentences (not bullet lists)?
       Be specific — quote where sections are thin or missing.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       PR body must contain a Management Summary in full sentences (no bullet list) covering all five
       subsections: (1.1) Standard ID, version, domain; (1.2) rationale; (1.3) what has changed;
@@ -237,7 +237,7 @@ artifact_rules:
       (3) Is "Not applicable – new standard" used appropriately or as an excuse?
       (4) Has the requesting committee/expert group explicitly confirmed the BC assessment?
       Be specific — quote the relevant phrase.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       PR Section 1.5 must contain a backward-compatibility statement explicitly confirmed by the
       requesting Committee and Expert Group. Existing implementations must not be broken without a
@@ -266,7 +266,7 @@ artifact_rules:
       (4) Is there vague language (should, appropriate, reasonably)?
       (5) Is each CAC backed by at least one MUST statement in the standard?
       Be specific — quote examples of good and problematic criteria.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       Standard must include a Consolidated Conformity Assessment Criteria (CAC) section. Criteria must
       be categorised into APIs, Semantics, Protocols, and Logic/Processing, applicable in the
@@ -296,7 +296,7 @@ artifact_rules:
       intends mandatory behaviour? (4) Are any MUST statements addressed to
       the CAB or Expert Group rather than to the system implementer?
       Be specific — quote examples of correct and incorrect usage.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       Standard must not consist solely of MAY statements. MUST requirements must be clearly defined.
       Without mandatory criteria, conformity cannot be assessed.
@@ -318,7 +318,7 @@ artifact_rules:
       outside the immediate Expert Group? (2) Is a glossary section present?
       (3) Does the title accurately reflect the scope (cf. Material Accounting example
       where the title suggested a broader scope than was actually covered)?
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       A glossary section should be included where ambiguous or domain-specific terminology is used.
       Standards must be clearly understandable.
@@ -356,7 +356,7 @@ artifact_rules:
       differently in different chapters)? (2) Are there proprietary technology lock-ins
       or product-name references in normative text? (3) Are key terms used consistently?
       Flag specific contradictions or inconsistencies with section references.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       No contradictory statements, clearly phrased, no proprietary lock-ins. Consistent terminology
       across the document.
@@ -379,7 +379,7 @@ artifact_rules:
       Assess: (1) Are referenced CX standards reachable and existing? (2) Are there contradictions
       between this standard and the referenced ones? (3) Has the substantive impact on referenced
       standards been evaluated (complement to QG1-09)?
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       Referenced standards must exist and must not contradict the current standard. Complements QG1-09
       by adding substantive verification at PR level.
@@ -400,7 +400,7 @@ artifact_rules:
       Flag any of: price fixing/coordination signals, market allocation language,
       exclusion of specific competitors, or use of proprietary IP without proper
       licensing/attribution. Be conservative — flag for human review when uncertain.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       The standard must comply with all requirements, laws, and rules relating to antitrust law and
       IP regulations. Fundamental compliance requirement anchored in the Operating Model.
@@ -507,7 +507,7 @@ artifact_rules:
       respective scope? (2) Are non-certification references correctly placed under "Non-normative
       references"? (3) Is the Modular System used to verify the referencing?
       Listing standards under normative references falsely indicates the need to certify them.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       Normative references must be in accordance with the need of certification of respective standards.
       References to standards that do not need to be certified within the respective scope must be
@@ -612,7 +612,7 @@ bc_diff_rules:
       (3) Is this a breaking change — could existing certified implementations fail?
       (4) Is the change justified by the stated version type?
       Be specific — quote the before/after text of each changed MUST.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       MUST/SHALL statements are normatively binding and form the basis for certification and
       implementation. Any change is breaking by default. BC concept required.
@@ -634,7 +634,7 @@ bc_diff_rules:
       (1) What field/model changed and how? (2) Is this breaking for existing
       producers/consumers? (3) Is the change justified?
       Be specific — quote the affected field names and file paths.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       Data models define the structure of data exchange. Removal, replacement, or modification of
       fields, field types, or semantics breaks existing implementations. BC concept required.
@@ -702,7 +702,7 @@ bc_diff_rules:
       Assess: (1) Did the referenced version itself contain breaking changes? (2) Does the upgrade
       transitively affect normative obligations of this standard?
       Note: SemVer of the referenced spec does NOT automatically guarantee compatibility.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       Standards frequently reference external specifications. Semantic versioning of the referenced
       spec does not automatically guarantee compatibility — a transitive review is required.
@@ -785,7 +785,7 @@ bc_diff_rules:
       into an informative annex, or relabeled as guidance/example/note.
       Even if the sentence text is identical, this effectively deletes the requirement and breaks
       implementations that relied on it. Quote the affected statement and its old/new section.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       Moving a MUST/SHALL requirement into an informative section effectively deletes the requirement.
       Existing implementations that relied on it can break silently.
@@ -806,7 +806,7 @@ bc_diff_rules:
       For each bump, determine whether the referenced version is breaking. Normative references
       transitively apply requirements to the referencing standard, so a bump to a breaking version
       shifts the normative surface.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       Normative references transitively apply the referenced requirements to this standard. A bump to
       a breaking version of the referenced standard is itself breaking for this standard.
@@ -843,7 +843,7 @@ cac_quality_rules:
       Assess whether criteria are organised into the four mandatory categories:
       API, Semantics, Protocol, Logic/Processing.
       For each category present, note whether the criteria are truly testable.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: CAC criteria must be categorised into APIs, Semantics, Protocols, Logic/Processing.
     fail_if:
       - Fewer than 2 categories present
@@ -862,7 +862,7 @@ cac_quality_rules:
       reasonably, if applicable, or any other language that does not produce
       a binary pass/fail test result. For each flagged criterion, suggest
       a more precise, testable reformulation.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: CAC criteria must be objectively testable. No vague terms.
     fail_if:
       - Vague terms (should, appropriate, reasonably) in CAC section
@@ -880,7 +880,7 @@ cac_quality_rules:
       one MUST statement in the standard body.
       For each CAC item, identify the backing MUST statement (or flag if missing).
       Note: a CAC without a backing MUST is unenforceable.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: Every CAC criterion must correspond to a normative MUST in the standard.
     fail_if:
       - No MUST statements in standard
@@ -945,7 +945,7 @@ cac_quality_rules:
       Analyse each CAC for atomicity of normative statement.
       Flag CACs that contain multiple paragraphs, bullet lists, or multiple normative statements
       compressed into one entry. ✅ "The provider MUST implement…"  ❌ Multiple paragraphs in one CAC.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: Each CAC must be formulated as exactly one normative statement using MUST, SHOULD or MAY.
     fail_if:
       - Multiple normative statements bundled in one CAC
@@ -964,7 +964,7 @@ cac_quality_rules:
       Detect mixing of normative requirement text with explanations, examples, or context within the
       same CAC field. The Requirement field must contain only the requirement; explanations belong in
       separate notes/comments fields.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: Requirement and supporting information MUST be strictly separated.
     fail_if:
       - Requirement field mixes normative text with explanations or examples
@@ -998,7 +998,7 @@ cac_quality_rules:
       Analyse each CAC for atomicity: does it describe exactly one testable requirement, or does it
       bundle multiple distinct conditions that would each warrant their own pass/fail outcome?
       Non-atomic CACs cannot be tested consistently and inflate audit complexity.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: Each CAC must describe exactly one testable requirement.
     fail_if:
       - CAC bundles multiple independent test conditions
@@ -1015,7 +1015,7 @@ cac_quality_rules:
     ai_prompt: >
       Detect non-measurable CACs. ✅ Defined endpoint, schema, threshold.  ❌ "appropriate
       implementation" or other subjective language.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: Each CAC must be objectively measurable using defined criteria.
     fail_if:
       - Subjective language (e.g., "appropriate implementation") in CAC
@@ -1061,7 +1061,7 @@ cac_quality_rules:
       Detect redundancy or overlap between CACs. Multiple CACs describing the same protocol
       requirement create contradictions and inflate certification effort. Each CAC should have a
       unique scope.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: CACs must not be redundant or overlapping.
     fail_if:
       - Two or more CACs describe the same requirement with overlapping scope
@@ -1119,7 +1119,7 @@ cac_quality_rules:
     ai_prompt: >
       For each CAC, identify the higher-level standard requirement it supports. CACs exist only to
       validate standard requirements, not standalone ideas.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: Each CAC must clearly support a higher-level requirement of the standard.
     fail_if:
       - CAC has no clear link to a standard objective or requirement
@@ -1214,7 +1214,7 @@ change_classification_rules:
       Detect substantive changes in the diff: normative keyword change (e.g. SHOULD → MUST),
       condition/scope change, data model field added/removed/renamed, MUST requirement deleted, etc.
       All substantive changes in normative sections are subject to Review + Opt-Out.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       Substantive changes (SU-1 … SU-9) shift meaning, scope, or interpretation: normative keyword
       change, condition/scope change, data model change, etc. Substantive changes in normative
@@ -1272,7 +1272,7 @@ change_classification_rules:
       (5) no normative reference bump;
       (6) no normative ↔ non-normative move (i.e. no ST-2).
       A single failed criterion disqualifies the Patch-Track. Burden of proof lies with the change author.
-      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "..." }
+      Respond as JSON: { "result": "pass|advisory|fail", "confidence": 0.0-1.0, "finding": "<one sentence diagnosing what is missing or weak>", "suggestion": "<concrete draft text in English the author can paste into the issue/PR to address this finding, ≤300 chars; or null if result is pass>" }
     check: >
       A change qualifies for the Patch-Track only if ALL six criteria hold. One failed criterion
       disqualifies the Patch-Track. Closed list intended to be used as both a human checklist and a

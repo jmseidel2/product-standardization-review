@@ -1129,7 +1129,7 @@ PR body (first 1800 chars):
 ${(pr.body||'').slice(0,1800)}
 
 Assess: (1) Do the PR changes match what was planned in the Issue? (2) Are planned changes missing from the PR? (3) Does the PR introduce scope not described in the Issue?
-Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}`;
+Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"...","suggestion":"concrete draft text the author can paste in to fix this finding (English, ≤300 chars), or null if pass"}`;
             const cr=await callAI(crPrompt,'cr-coherence');
             if(cr){
               const crR=cr.result==='pass'
@@ -1171,7 +1171,7 @@ function rrow(r,itemUrl=''){
   const hasAI=r.aiResult&&aiEnabled();
   const aiBlock=hasAI?`<div class="ai-finding">${r.aiResult.finding||''}</div><div class="ai-conf">AI confidence: ${Math.round((r.aiResult.confidence||0)*100)}%</div>`:'';
   const isFailing=r.result==='FAIL'||r.result==='ADVISORY'||r.result==='AI-FAIL'||r.result==='AI-ADVISORY';
-  const suggText=isFailing?(r.suggestion||SUGGESTIONS[r.id]||''):'';
+  const suggText=isFailing?(r.aiResult?.suggestion||r.suggestion||SUGGESTIONS[r.id]||''):'';
   const suggBlock=suggText?`<div class="sugg-box">💡 ${suggText}</div>`:'';
   const locHtml=r.loc?(itemUrl
     ?`<a href="${itemUrl}" target="_blank" class="floc" style="text-decoration:none">${r.loc} ↗</a>`
@@ -1324,7 +1324,7 @@ function exportMD(){
   const d=window._LR;if(!d)return;
   const ic=r=>({PASS:'✅',FAIL:r.blocking?'🚫':'❌',ADVISORY:'⚠️',SKIP:'–','AI-ADVISORY':'🤖⚠️','AI-FAIL':'🤖❌'})[r.result]||'–';
   const tbl=rows=>`| | Rule | Result | Finding | AI Finding | Suggestion |\n|---|---|---|---|---|---|\n`+
-    rows.filter(r=>r.result!=='SKIP').map(r=>`| ${ic(r)} | \`${r.id}\` ${r.title} | ${r.result} | ${r.note||'—'} | ${r.aiResult?.finding||'—'} | ${(r.result==='FAIL'||r.result==='ADVISORY')?(r.suggestion||SUGGESTIONS[r.id]||'—'):'—'} |`).join('\n');
+    rows.filter(r=>r.result!=='SKIP').map(r=>`| ${ic(r)} | \`${r.id}\` ${r.title} | ${r.result} | ${r.note||'—'} | ${r.aiResult?.finding||'—'} | ${(r.result==='FAIL'||r.result==='ADVISORY')?(r.aiResult?.suggestion||r.suggestion||SUGGESTIONS[r.id]||'—'):'—'} |`).join('\n');
   let md=`# TC4S Review Report\n\n**Date:** ${new Date().toISOString().split('T')[0]}  \n**Repo:** ${OW}/${RE}  \n**AI:** ${aiEnabled()?'enabled':'disabled'}\n\n---\n\n## QG-1 – Issues\n\n`;
   for(const g of [{k:'SR',l:'Standard Requests'},{k:'CR',l:'Change Requests'},{k:'Patch',l:'Patch Requests'}]){
     const items=d.issueR.filter(r=>r.type===g.k&&exportSelected(r.item.number,'issue'));
@@ -1371,7 +1371,7 @@ function exportXLSX(){
     for(const chk of r.qg1){
       if(chk.result==='SKIP') continue;
       const isFailing=chk.result==='FAIL'||chk.result==='ADVISORY'||chk.result==='AI-FAIL'||chk.result==='AI-ADVISORY';
-      qg1Rows.push([r.item.number,r.item.title,r.type,chk.id,chk.title,chk.result,chk.note||'',chk.source||'',chk.loc||'',chk.aiResult?.finding||'',chk.aiResult?Math.round((chk.aiResult.confidence||0)*100)+'%':'',isFailing?(chk.suggestion||SUGGESTIONS[chk.id]||''):'']);
+      qg1Rows.push([r.item.number,r.item.title,r.type,chk.id,chk.title,chk.result,chk.note||'',chk.source||'',chk.loc||'',chk.aiResult?.finding||'',chk.aiResult?Math.round((chk.aiResult.confidence||0)*100)+'%':'',isFailing?(chk.aiResult?.suggestion||chk.suggestion||SUGGESTIONS[chk.id]||''):'']);
     }
   }
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(qg1Rows),'QG1 Issues');
@@ -1384,7 +1384,7 @@ function exportXLSX(){
     for(const chk of r.qg2){
       if(chk.result==='SKIP') continue;
       const isFailing=chk.result==='FAIL'||chk.result==='ADVISORY'||chk.result==='AI-FAIL'||chk.result==='AI-ADVISORY';
-      qg2Rows.push([r.item.number,r.item.title,chk.id,chk.title,chk.result,chk.note||'',chk.source||'',chk.loc||'',chk.aiResult?.finding||'',chk.aiResult?Math.round((chk.aiResult.confidence||0)*100)+'%':'',isFailing?(chk.suggestion||SUGGESTIONS[chk.id]||''):'']);
+      qg2Rows.push([r.item.number,r.item.title,chk.id,chk.title,chk.result,chk.note||'',chk.source||'',chk.loc||'',chk.aiResult?.finding||'',chk.aiResult?Math.round((chk.aiResult.confidence||0)*100)+'%':'',isFailing?(chk.aiResult?.suggestion||chk.suggestion||SUGGESTIONS[chk.id]||''):'']);
     }
   }
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(qg2Rows),'QG2 PRs');
@@ -1394,23 +1394,23 @@ function exportXLSX(){
 
 // ── Fallback rules ────────────────────────────────────────────────────────────
 const FALLBACK_QG1=[
-  {id:'QG1-01',title:'Management Summary present and filled',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse the Management Summary. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'QG1-01',title:'Management Summary present and filled',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse the Management Summary. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"...","suggestion":"concrete draft text the author can paste in to fix this finding (English, ≤300 chars), or null if pass"}'},
   {id:'QG1-02',title:'Domain Manager label; >=3 companies',status:'Active',enabled:true,ai_check:false},
   {id:'QG1-03',title:'Mandatory artifacts referenced',status:'Active',enabled:true,ai_check:false},
-  {id:'QG1-04',title:'SR: solid description',status:'Recommendation',enabled:true,ai_check:true,ai_prompt:'Analyse SR description quality. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
-  {id:'QG1-05',title:'Scope overlap verified',status:'Recommendation',enabled:true,ai_check:true,ai_prompt:'Check overlap documentation. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
-  {id:'QG1-06',title:'No feature-level standardization',status:'Recommendation',enabled:true,ai_check:true,ai_prompt:'Check for feature-level scope. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'QG1-04',title:'SR: solid description',status:'Recommendation',enabled:true,ai_check:true,ai_prompt:'Analyse SR description quality. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"...","suggestion":"concrete draft text the author can paste in to fix this finding (English, ≤300 chars), or null if pass"}'},
+  {id:'QG1-05',title:'Scope overlap verified',status:'Recommendation',enabled:true,ai_check:true,ai_prompt:'Check overlap documentation. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"...","suggestion":"concrete draft text the author can paste in to fix this finding (English, ≤300 chars), or null if pass"}'},
+  {id:'QG1-06',title:'No feature-level standardization',status:'Recommendation',enabled:true,ai_check:true,ai_prompt:'Check for feature-level scope. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"...","suggestion":"concrete draft text the author can paste in to fix this finding (English, ≤300 chars), or null if pass"}'},
   {id:'QG1-07',title:'Deprecation Requests linked',status:'Recommendation',enabled:true,ai_check:false},
-  {id:'QG1-08',title:'Change type justified',status:'Recommendation',enabled:true,ai_check:true,ai_prompt:'Analyse version type justification. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
-  {id:'QG1-09',title:'Cross-dependencies documented',status:'Recommendation',enabled:true,ai_check:true,ai_prompt:'Analyse cross-standard dependencies. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'QG1-08',title:'Change type justified',status:'Recommendation',enabled:true,ai_check:true,ai_prompt:'Analyse version type justification. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"...","suggestion":"concrete draft text the author can paste in to fix this finding (English, ≤300 chars), or null if pass"}'},
+  {id:'QG1-09',title:'Cross-dependencies documented',status:'Recommendation',enabled:true,ai_check:true,ai_prompt:'Analyse cross-standard dependencies. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"...","suggestion":"concrete draft text the author can paste in to fix this finding (English, ≤300 chars), or null if pass"}'},
 ];
 const FALLBACK_QG2=[
   {id:'QG2-01',title:'PR checklist completed',status:'Active',enabled:true,ai_check:false},
-  {id:'QG2-02',title:'Management Summary (1.1-1.5)',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse PR Management Summary sections 1.1-1.5. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
-  {id:'BC-PR-01',title:'MUST changed in diff',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse MUST statement changes. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'QG2-02',title:'Management Summary (1.1-1.5)',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse PR Management Summary sections 1.1-1.5. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"...","suggestion":"concrete draft text the author can paste in to fix this finding (English, ≤300 chars), or null if pass"}'},
+  {id:'BC-PR-01',title:'MUST changed in diff',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse MUST statement changes. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"...","suggestion":"concrete draft text the author can paste in to fix this finding (English, ≤300 chars), or null if pass"}'},
   {id:'CAC-01',title:'CAC section present',status:'Active',enabled:true,ai_check:false},
-  {id:'CAC-02',title:'CAC categorised',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse CAC categorisation. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
-  {id:'CAC-03',title:'No vague language in CAC',status:'Active',enabled:true,ai_check:true,ai_prompt:'Check CAC for vague language. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"..."}'},
+  {id:'CAC-02',title:'CAC categorised',status:'Active',enabled:true,ai_check:true,ai_prompt:'Analyse CAC categorisation. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"...","suggestion":"concrete draft text the author can paste in to fix this finding (English, ≤300 chars), or null if pass"}'},
+  {id:'CAC-03',title:'No vague language in CAC',status:'Active',enabled:true,ai_check:true,ai_prompt:'Check CAC for vague language. Respond as JSON: {"result":"pass|advisory|fail","confidence":0.0-1.0,"finding":"...","suggestion":"concrete draft text the author can paste in to fix this finding (English, ≤300 chars), or null if pass"}'},
   {id:'DM-01',title:'[PLACEHOLDER] Aspect model diff',status:'Active',enabled:false,ai_check:false,placeholder:true},
 ];
 
